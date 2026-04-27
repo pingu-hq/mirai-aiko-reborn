@@ -45,9 +45,7 @@ class LocalConfig(BaseSettings):
 
 
 
-    @property
-    def _database_type(self):
-        return "postgres"
+    _database_type: str = Field(default="postgres")
 
     model_config = SettingsConfigDict(
         env_file=_env_file_name("local"),
