@@ -1,14 +1,13 @@
-from src.core.config import local_config
+from src.core.config import settings
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-database_url = local_config.DATABASE_URL
 
 class DatabaseManager:
     def __init__(self):
         self.engine = create_async_engine(
-            database_url.get_secret_value(),
+            settings.DATABASE_URL,
             echo=True,
             future=True,
             pool_size = 5,  # Connection pool size
