@@ -15,7 +15,7 @@ from src.models.conversation_model import Conversation
 # import os
 # from dotenv import load_dotenv
 # load_dotenv()
-from src.core.config import local_config
+from src.core.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -23,12 +23,11 @@ config = context.config
 
 # database_url = os.getenv("DATABASE_URL")
 # database_url = settings.DATABASE_URL.get_secret_value()
-# database_url = settings.DATABASE_URL
-database_url = local_config.database_url
+database_url = settings.DATABASE_URL
 if not database_url:
     raise ValueError("DATABASE_URL not set for migrations")
 
-config.set_main_option("sqlalchemy.url", database_url.get_secret_value())
+config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
