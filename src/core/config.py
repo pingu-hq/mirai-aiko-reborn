@@ -1,53 +1,18 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, SecretStr
+from pydantic import SecretStr
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-DATABASE_PATH =  Path(__file__).resolve().parent.parent / "databases" / "test.db"
-DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-SQLITE_URL = f"sqlite+aiosqlite:///{DATABASE_PATH.as_posix()}"
-
-
-class Settings(BaseSettings):
-    PROJECT_NAME: str = "Miako App MVP"
-    SECRET_KEY: SecretStr
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    DOMAIN: str = Field(...)
-    DATABASE_TYPE: str = Field(default="postgres") #Change this to postgres if you want to use postgres database
-    POSTGRES_URL: SecretStr
-
-    model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
-
-    @property
-    def DATABASE_URL(self) -> str:
-        if self.DATABASE_TYPE == "sqlite":
-            return SQLITE_URL
-        return self.POSTGRES_URL.get_secret_value()
-
-# settings = Settings()
 
 def _env_file_name(name: str):
     return BASE_DIR / "secret_keys" / f".env.{name}"
 
 class LocalConfig(BaseSettings):
     SECRET_KEY: SecretStr = None
-    DATABASE_URL: SecretStr = None
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
     REFRESH_TOKEN_EXPIRE_DAYS: int = 15
     ALGORITHM: str = "HS256"
 
-
-
-    @property
-    def _database_type(self):
-        return "postgres"
 
     model_config = SettingsConfigDict(
         env_file=_env_file_name("local"),
@@ -60,21 +25,6 @@ class LocalConfig(BaseSettings):
         if not self.SECRET_KEY:
             raise ValueError("No secret key provided")
         return self.SECRET_KEY
-
-    @property
-    def database_url(self) -> SecretStr:
-        if not self.DATABASE_URL:
-            raise ValueError(f"No database URL provided.")
-
-        if self._database_type == "postgres":
-            return self.DATABASE_URL
-
-        elif self._database_type == "sqlite":
-            global SQLITE_URL
-            return SecretStr(SQLITE_URL)
-
-        else:
-            raise ValueError("No database type provided")
 
     @property
     def access_token_minutes(self):
