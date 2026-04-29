@@ -2,10 +2,11 @@ from fastapi import FastAPI
 import asyncio
 
 app = FastAPI()
-@app.get("/")
-async def root():
+@app.get("/hello-env-var")
+async def hello_world():
     await asyncio.sleep(1)
-    return {"message": "Hello World"}
+    from src.core.local_config import settings
+    return {"message": settings.hello_world}
 
 
 if __name__ == "__main__":
