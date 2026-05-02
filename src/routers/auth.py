@@ -20,9 +20,11 @@ class SignUp(Login):
 
 @router.post("/login", status_code=status.HTTP_200_OK)
 async def login_endpoint(login: Login, resp: Response):
-    sa = SecurityAuth()
     mongo_db = MongoDbDataStore()
-    hashed_password = await mongo_db.get_user_by_email(login.email)
+    user_info = await mongo_db.get_user_by_email(login.email)
+    hashed_password = user_info.get("password")
+
+    sa = SecurityAuth()
     validity = await sa.login_with_cookie(
         user=login.email,
         password=login.password,
