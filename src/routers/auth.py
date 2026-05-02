@@ -14,8 +14,9 @@ router = APIRouter(
 class Login(BaseModel):
     email: str
     password: str
-    name: str
 
+class SignUp(Login):
+    name: str
 
 @router.post("/login", status_code=status.HTTP_200_OK)
 async def login_endpoint(login: Login, resp: Response):
@@ -31,6 +32,20 @@ async def login_endpoint(login: Login, resp: Response):
     if not validity:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Incorrect username or password")
     return {"status":"ok"}
+
+
+@router.post("/sign-up", status_code=status.HTTP_201_CREATED)
+async def sign_up_endpoint(sign_user: SignUp):
+    try:
+        mongo_db = MongoDbDataStore()
+        user_id = await mongo_db.create_user(
+            email=sign_user.email,
+            name=sign_user.name,
+            password=sign_user.password
+        )
+        return {"status":"ok", "user_id":user_id}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
 @router.get("/me", status_code=status.HTTP_202_ACCEPTED)
 def check_cookie_good(resp: Response, req: Request):
