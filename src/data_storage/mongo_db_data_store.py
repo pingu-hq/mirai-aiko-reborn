@@ -12,9 +12,9 @@ class MongoDbDataStore:
     def __init__(self):
         self.auth = SecurityAuth()
 
-    def init_db(self):
+    async def init_db(self):
         try:
-            self.users.create_index("email", unique=True)
+            await self.users.create_index("email", unique=True)
         except pymongo.errors.OperationFailure as e:
             print(f"ℹ️ Index status: {e}")
 
@@ -29,7 +29,7 @@ class MongoDbDataStore:
 
 
     async def create_user(self, email: str, password: str, name: str):
-        self.init_db()
+        await self.init_db()
         hashed_password = await self.auth.get_hash_password(password)
         to_user_db = {
             "email": email,
@@ -37,8 +37,8 @@ class MongoDbDataStore:
             "name": name
         }
         _insert = await self.users.insert_one(to_user_db)
-        return _insert.inserted_id
+        return str(_insert.inserted_id)
 
     async def get_user_by_email(self, email: str):
-        self.init_db()
+        await self.init_db()
         return await self.users.find_one({"email": email})
