@@ -13,12 +13,6 @@ class MongoDbDataStore:
     def __init__(self):
         self.auth = SecurityAuth()
 
-    async def init_db(self):
-        try:
-            await self.users.create_index("email", unique=True)
-        except pymongo.errors.OperationFailure as e:
-            print(f"ℹ️ Index status: {e}")
-
     @property
     def users(self) -> AsyncCollection:
         global _users_collection
@@ -47,9 +41,6 @@ class MongoDbDataStore:
             raise ex
 
 
-    async def get_user_by_email(self, email: str):
-        await self.init_db()
-        return await self.users.find_one({"email": email})
     async def get_id_and_password(self, email: str):
         user_info = await self.users.find_one({"email": email})
         if not user_info:
@@ -59,3 +50,15 @@ class MongoDbDataStore:
         current_password = user_info.get("password")
 
         return current_external_id, current_password
+
+    async def reset_users_collection(self):
+        """Purges the users collection for development resets."""
+        await self.users.drop()
+
+        # Rebuild unique indexes immediately after the collection is cleared
+        await self.users.create_index("email", unique=True)
+        await self.users.create_index("external_id", unique=True)
+
+# import asyncio
+# cleaning = MongoDbDataStore()
+# asyncio.run(cleaning.reset_users_collection())
