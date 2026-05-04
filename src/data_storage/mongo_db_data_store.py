@@ -3,6 +3,7 @@ from pymongo.asynchronous.collection import AsyncCollection
 import pymongo.errors
 from src.core.local_config import settings
 from src.core.security import SecurityAuth
+import ulid
 
 
 
@@ -29,15 +30,22 @@ class MongoDbDataStore:
 
 
     async def create_user(self, email: str, password: str, name: str):
-        await self.init_db()
-        hashed_password = await self.auth.get_hash_password(password)
-        to_user_db = {
-            "email": email,
-            "password": hashed_password,
-            "name": name
-        }
-        _insert = await self.users.insert_one(to_user_db)
-        return str(_insert.inserted_id)
+        try:
+            hashed_password = await self.auth.get_hash_password(password)
+            external_id = str(ulid.new())
+            to_user_db = {
+                "email": email,
+                "password": hashed_password,
+                "name": name,
+                "external_id": external_id
+            }
+            _insert = await self.users.insert_one(to_user_db)
+            return True
+        except pymongo.errors.DuplicateKeyError:
+            return False
+        except Exception as ex:
+            raise ex
+
 
     async def get_user_by_email(self, email: str):
         await self.init_db()
