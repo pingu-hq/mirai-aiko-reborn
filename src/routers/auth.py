@@ -67,7 +67,6 @@ def check_cookie_good(resp: Response, req: Request):
     return {"_id":_id}
 
 @router.get("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout_endpoint(resp: Response, req: Request):
+def logout_endpoint(request: Request):
     sa = SecurityAuth()
-    if not sa.logout(req, resp):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+    sa.revocation_of_jti(request=request)
