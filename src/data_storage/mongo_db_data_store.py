@@ -50,3 +50,12 @@ class MongoDbDataStore:
     async def get_user_by_email(self, email: str):
         await self.init_db()
         return await self.users.find_one({"email": email})
+    async def get_id_and_password(self, email: str):
+        user_info = await self.users.find_one({"email": email})
+        if not user_info:
+            return "", ""
+
+        current_external_id = user_info.get("external_id")
+        current_password = user_info.get("password")
+
+        return current_external_id, current_password
