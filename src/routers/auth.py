@@ -19,22 +19,33 @@ class SignUp(Login):
     name: str
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login_endpoint(login: Login, resp: Response):
-    mongo_db = MongoDbDataStore()
-    user_info = await mongo_db.get_user_by_email(login.email)
-    hashed_password = user_info.get("password")
-
+async def login_endpoint(login: Login, resp: Response, request: Request):
+    _error = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized!")
     sa = SecurityAuth()
-    validity = await sa.login_with_cookie(
-        user=login.email,
-        password=login.password,
-        hashed_password=hashed_password,
-        resp=resp
-    )
-    if not validity:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Incorrect username or password")
-    return {"status":"ok"}
+    if sa.check_current_user_logged_in(request=request):
+        # print("ERROR IN EXISTING USER IN COOKIE")
+        raise _error
 
+    try:
+        mongo_db = MongoDbDataStore()
+        user_info_id, user_info_hash_pass = await mongo_db.get_id_and_password(login.email)
+        if user_info_id is None or user_info_hash_pass is None:
+            raise _error
+
+        validity = await sa.login_with_cookie(
+            user=user_info_id,
+            password=login.password,
+            hashed_password=user_info_hash_pass,
+            resp=resp
+        )
+        if not validity:
+            # print("ERROR IN VALIDITY OF LOGIN USER")
+            raise _error
+        return {"status":"ok"}
+
+    except Exception as ex:
+        print(str(ex))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post("/sign-up", status_code=status.HTTP_201_CREATED)
 async def sign_up_endpoint(sign_user: SignUp):
