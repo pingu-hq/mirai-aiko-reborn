@@ -51,12 +51,14 @@ async def login_endpoint(login: Login, resp: Response, request: Request):
 async def sign_up_endpoint(sign_user: SignUp):
     try:
         mongo_db = MongoDbDataStore()
-        user_id = await mongo_db.create_user(
+        created_user = await mongo_db.create_user(
             email=sign_user.email,
             name=sign_user.name,
             password=sign_user.password
         )
-        return {"status":"ok", "user_id":user_id}
+        if not created_user:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT)
+        return {"status":"ok"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
@@ -64,7 +66,7 @@ async def sign_up_endpoint(sign_user: SignUp):
 def check_cookie_good(resp: Response, req: Request):
     sa = SecurityAuth()
     _id = sa.get_cookie_id(req, resp)
-    return {"_id":_id}
+    return {"unique_identifier":_id}
 
 @router.get("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout_endpoint(request: Request):
