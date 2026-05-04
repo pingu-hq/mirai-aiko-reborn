@@ -15,5 +15,6 @@ dependencies = [
     "python-multipart>=0.0.27",
     "qdrant-client>=1.17.1",
     "redis>=7.4.0",
+    "ulid-py>=1.1.0",
     "uvicorn>=0.46.0",
 ]
