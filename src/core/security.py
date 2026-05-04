@@ -147,11 +147,11 @@ class SecurityAuth:
         return user
 
     def get_cookie_id(self, request: Request, response: Response) -> str | None:
-        access_token = self._get_access_cookie_sub(request)
+        access_token = self._get_sub_in_access_cookie(request)
         if access_token:
             return access_token
 
-        refresh_token = self._get_refresh_cookie_sub(request)
+        refresh_token = self._get_sub_in_refresh_cookie(request)
         if not refresh_token:
             return None
 
@@ -210,6 +210,16 @@ class SecurityAuth:
         self._set_cookie(user=user, resp=resp)
         return True
 
+    def check_current_user_logged_in(self, request: Request):
+        access_token = self._get_sub_in_access_cookie(request)
+        if access_token:
+            return True
+
+        refresh_token = self._get_sub_in_refresh_cookie(request)
+        if refresh_token:
+            return True
+
+        return False
 
 class SecurityAuthOriginal:
     def __init__(self, is_development: bool = True):
