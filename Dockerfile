@@ -16,6 +16,4 @@ RUN uv sync --frozen --no-cache \
     && rm -rf /root/.cache /tmp/* /var/tmp/* \
     && find /app -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
-RUN chmod +x /app/execute.py
-
-ENTRYPOINT ["/app/.venv/bin/python","/app/execute.py"]
+ENTRYPOINT ["/app/.venv/bin/uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
