@@ -1,40 +1,15 @@
 services:
-  miako-backend:
+  fastapi-service-miako:
     build: .
-    image: miako
-    container_name: miako-backend-container
+    image: mirai-aiko-reborn
+    container_name: backend-fastapi
     ports:
       - "127.0.0.1:8000:8000"
-
     env_file:
-      - .env
-    depends_on:
-      miako-database:
-        condition: service_healthy
+      - secrets/.env
     networks:
       - miako-network
-
-  miako-database:
-    image: postgres:15-alpine
-    container_name: miako-database-container
-    restart: unless-stopped
-    env_file:
-      - .env
-      - local.env
-    volumes:
-      - miako-data-volume:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - miako-network
-    # No ports exposed to host for security
-
-volumes:
-  miako-data-volume:
 
 networks:
-  miako-network:
+  full-network-miako:
     driver: bridge
