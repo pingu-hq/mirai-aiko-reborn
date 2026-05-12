@@ -69,4 +69,7 @@ class MemoryStore:
             return json.loads(serialized)
         return None
 
-# memory = MemoryStore()
+
+@lru_cache()
+def memory():
+    return MemoryStore()
