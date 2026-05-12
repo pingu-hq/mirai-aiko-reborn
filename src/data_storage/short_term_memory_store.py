@@ -2,17 +2,10 @@ from redis import Redis
 from typing import Any
 from redis.asyncio import Redis as RedisAsync
 from datetime import timedelta
+from functools import lru_cache
 import json
 
 
-_sync_redis_client: Redis = Redis(
-    host='127.0.0.1',
-    port=6379,
-    db=0,
-    max_connections=15,
-    socket_timeout=5,
-    retry_on_timeout=True
-)
 
 class JwtRedisStore:
     def __init__(self):
@@ -20,16 +13,22 @@ class JwtRedisStore:
         self._redis = None
 
     @property
-    def memory(self) -> Redis:
-        global _sync_redis_client
+    def redis(self) -> Redis:
         if self._redis is None:
-            self._redis = _sync_redis_client
+            self._redis = Redis(
+                host='127.0.0.1',
+                port=6379,
+                db=0,
+                max_connections=15,
+                socket_timeout=5,
+                retry_on_timeout=True
+            )
         return self._redis
 
     def get_(self, _key: Any):
 
         _name = f"jti=={_key}"
-        raw_data = self.memory.get(name=_name)
+        raw_data = self.redis.get(name=_name)
         if not raw_data:
             return None
 
@@ -40,11 +39,15 @@ class JwtRedisStore:
         serialized = json.dumps(value)
         if ttl == 0:
             ttl = self.expire_ttl
-        self.memory.set(name=_name, value=serialized, ex=ttl)
+        self.redis.set(name=_name, value=serialized, ex=ttl)
 
     def delete_(self, _key: str):
         _name = f"jti=={_key}"
-        self.memory.delete(_name)
+        self.redis.delete(_name)
+
+@lru_cache()
+def jwt_redis():
+    return JwtRedisStore()
 
 class MemoryStore:
     def __init__(self):
