@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     GROQ_API_KEY: SecretStr = None
     COHERE_API_KEY: SecretStr = None
 
+    MILVUS_URI: SecretStr = None
+    MILVUS_TOKEN: SecretStr = None
+
 
     @staticmethod
     def value_error():
@@ -47,6 +50,16 @@ class Settings(BaseSettings):
         if not self.COHERE_API_KEY:
             self.value_error()
         return self.COHERE_API_KEY
+
+    def milvus_uri(self):
+        if not self.MILVUS_URI:
+            self.value_error()
+        return self.MILVUS_URI
+
+    def milvus_token(self):
+        if not self.MILVUS_TOKEN:
+            self.value_error()
+        return self.MILVUS_TOKEN
 
     model_config = SettingsConfigDict(
         env_file=env_file_path,
