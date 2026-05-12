@@ -3,7 +3,7 @@ from typing import Any
 from jose import jwt
 from jose.exceptions import JWTError, ExpiredSignatureError, JWTClaimsError
 from src.core.local_config import settings
-from src.data_storage.short_term_memory_store import JwtRedisStore
+from src.data_storage.short_term_memory_store import jwt_redis
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 from fastapi import Request, Response, HTTPException
@@ -24,7 +24,7 @@ class SecurityAuth:
         self._ph = _password_hasher
         self.secret_key = settings.groq_api_key.get_secret_value()
         self.algorithm = "HS256"
-        self.jti_memory = JwtRedisStore()
+        self.jti_memory = jwt_redis()
 
     @property
     def ph(self) -> PasswordHasher:
@@ -56,8 +56,7 @@ class SecurityAuth:
         access_token = self._token_encoder(access_payload)
         refresh_token = self._token_encoder(refresh_payload)
 
-        jrs = JwtRedisStore()
-        jrs.set_(_key=jti_id, value=time_now.isoformat())
+        self.jti_memory.set_(_key=jti_id, value=time_now.isoformat())
         return access_token, refresh_token
 
 
