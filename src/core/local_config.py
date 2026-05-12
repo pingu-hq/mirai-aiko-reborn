@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from pydantic import SecretStr
+from functools import lru_cache
 
 env_file_path = Path(__file__).resolve().parent.parent.parent / "secrets" / ".env"
 
@@ -53,4 +54,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-settings = Settings()
+@lru_cache()
+def get_settings():
+    return Settings()
+
+settings = get_settings()
