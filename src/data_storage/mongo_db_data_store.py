@@ -3,11 +3,16 @@ from pymongo.asynchronous.collection import AsyncCollection
 import pymongo.errors
 from src.core.local_config import settings
 from src.core.security import SecurityAuth
+from functools import lru_cache
 import ulid
 
 
 
-_users_collection: AsyncCollection | None = None
+@lru_cache()
+def users_collection() -> AsyncCollection:
+    _client = AsyncMongoClient(settings.mongo_db.get_secret_value())
+    _db = _client["mirai-aiko-database"]
+    return _db["users"]
 
 class MongoDbDataStore:
     def __init__(self):
@@ -15,12 +20,7 @@ class MongoDbDataStore:
 
     @property
     def users(self) -> AsyncCollection:
-        global _users_collection
-        if _users_collection is None:
-            _client = AsyncMongoClient(settings.mongo_db.get_secret_value())
-            _db = _client["mirai-aiko-database"]
-            _users_collection = _db["users"]
-        return _users_collection
+        return users_collection()
 
 
     async def create_user(self, email: str, password: str, name: str):
