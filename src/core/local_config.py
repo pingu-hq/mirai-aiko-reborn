@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     MILVUS_URI: SecretStr = None
     MILVUS_TOKEN: SecretStr = None
 
+    AZURE_CLIENT_ID : SecretStr = None
+    AZURE_TENANT_ID: SecretStr = None
+    AZURE_CLIENT_SECRET: SecretStr = None
+    AZURE_AI_PROJECT_ENDPOINT: SecretStr = None
+
+    TEMP_FIRST_AGENT: str = ""
+
 
     @staticmethod
     def value_error():
@@ -60,6 +67,38 @@ class Settings(BaseSettings):
         if not self.MILVUS_TOKEN:
             self.value_error()
         return self.MILVUS_TOKEN
+
+    @property
+    def client_id(self):
+        if not self.AZURE_CLIENT_ID:
+            self.value_error()
+        return self.AZURE_CLIENT_ID
+
+    @property
+    def client_secret(self):
+        if not self.AZURE_CLIENT_SECRET:
+            self.value_error()
+        return self.AZURE_CLIENT_SECRET
+
+    @property
+    def tenant_id(self):
+        if not self.AZURE_TENANT_ID:
+            self.value_error()
+        return self.AZURE_TENANT_ID
+
+    @property
+    def ai_project_endpoint(self):
+        if not self.AZURE_AI_PROJECT_ENDPOINT:
+            self.value_error()
+        return self.AZURE_AI_PROJECT_ENDPOINT
+
+    @property
+    def temp_first_agent(self):
+        parts = self.TEMP_FIRST_AGENT.split("||")
+        agent_name = parts[0]
+        version = parts[1]
+        return agent_name, version
+
 
     model_config = SettingsConfigDict(
         env_file=env_file_path,
