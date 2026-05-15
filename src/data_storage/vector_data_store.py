@@ -77,24 +77,20 @@ class VectorDataStore:
 
     @staticmethod
     def node_cleansing(nodes: list[NodeWithScore]):
+        cleansed_nodes = ""
 
-        cleansed_data = ""
-
-        sensitive_keys = {"name_of_user"}
-
-        for info in nodes:
-            clean_metadata = info.metadata.copy()
-            clean_metadata.pop("name_of_user", None)
-
+        for i, n in enumerate(nodes):
+            cleaned_meta = n.metadata.copy()
+            cleaned_meta.pop("name_of_user", None)
             template = (
-                f"<START_of_context_block>  "
-                f"## Confidence Score: {info.score:.3f}  "
-                f"## Content: {info.get_content()}  "
-                f"## Metadata: {clean_metadata}  "
-                f"<END_of_context_block>\n---\n"
+                f"<document_id='{i+1}>\n "
+                f"<confidence_score>{n.score:.3f}</confidence_score>\n "
+                f"<source_info>{cleaned_meta}</source_info>\n "
+                f"<text_content>{n.get_content()}</text_content>\n "
+                f"</document>\n "
             )
-            cleansed_data += template
-        return cleansed_data
+            cleansed_nodes += template
+        return cleansed_nodes
 
 
     async def get_vector_by_query(self, query: str):
