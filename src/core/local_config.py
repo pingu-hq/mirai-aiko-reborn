@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: SecretStr = None
     AZURE_AI_PROJECT_ENDPOINT: SecretStr = None
 
-    TEMP_FIRST_AGENT: str = ""
+    TEMP_FIRST_AGENT: SecretStr = None
 
 
     @staticmethod
@@ -52,17 +52,19 @@ class Settings(BaseSettings):
             self.value_error()
         return self.GROQ_API_KEY
 
-
+    @property
     def cohere_api_key(self):
         if not self.COHERE_API_KEY:
             self.value_error()
         return self.COHERE_API_KEY
 
+    @property
     def milvus_uri(self):
         if not self.MILVUS_URI:
             self.value_error()
         return self.MILVUS_URI
 
+    @property
     def milvus_token(self):
         if not self.MILVUS_TOKEN:
             self.value_error()
@@ -94,10 +96,9 @@ class Settings(BaseSettings):
 
     @property
     def temp_first_agent(self):
-        parts = self.TEMP_FIRST_AGENT.split("||")
-        agent_name = parts[0]
-        version = parts[1]
-        return agent_name, version
+        if not self.TEMP_FIRST_AGENT:
+            self.value_error()
+        return self.TEMP_FIRST_AGENT
 
 
     model_config = SettingsConfigDict(
