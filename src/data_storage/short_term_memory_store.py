@@ -73,3 +73,18 @@ class MemoryStore:
 @lru_cache()
 def memory():
     return MemoryStore()
+
+@lru_cache()
+def redis_client_for_messages():
+    return Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True, socket_timeout=5)
+
+@lru_cache()
+def get_user_locks(user_id: str):
+    from asyncio import Lock
+    return Lock()
+
+class MessageStore:
+    def __init__(self, user_id: str):
+        self.redis_client = redis_client_for_messages()
+        self._user_id = f"message_store_{user_id}"
+        self.lock = get_user_locks(user_id)
