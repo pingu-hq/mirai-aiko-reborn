@@ -91,8 +91,8 @@ class Role(StrEnum):
 
 
 @lru_cache()
-def redis_client_for_messages():
-    return Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True, socket_timeout=5)
+def redis_client_for_messages() -> RedisAsync:
+    return RedisAsync(host='127.0.0.1', port=6379, db=0, decode_responses=True, socket_timeout=5)
 
 @lru_cache(maxsize=1000)
 def get_user_locks(user_id: str):
