@@ -1,7 +1,5 @@
-from src.agentic_workflows.azure_agents import MiraiAikoAgent
-from src.data_storage.short_term_memory_store import MessageStore
-from src.agentic_workflows.mirai_aiko_workflow import app as ai_agent, StateChat
-from fastapi import APIRouter
+from src.agentic_workflows.mirai_aiko_workflow import AgentWorkflow
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 
@@ -11,26 +9,16 @@ router = APIRouter(
 )
 
 class SendMessage(BaseModel):
-    text: str = Field(default="", description="Text to send")
+    input_message: str = Field(default="", description="Text to send")
     id: str
 
 
 @router.post("/send-message")
 async def api_send_message(message: SendMessage):
-    mem = MessageStore(user_id=message.id)
-    history = await mem.add_user_message(message.text)
-    agent = MiraiAikoAgent(input_message=history)
-    response = await agent.aexecute()
-    await mem.add_assistant_message(response)
-    return SendMessage(text=response, id=message.id)
-
-
-
-@router.post("/send-message-v1")
-async def api_send_message_v1(message: SendMessage):
-    state = StateChat(
-        id=message.id,
-        input_message=message.text
-    )
-    response = await ai_agent.ainvoke(state)
-    return response
+    try:
+        agent = AgentWorkflow(message.model_dump())
+        response = await agent.aexecute()
+        return response
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        raise HTTPException(status_code=400, detail="Bad Request")
