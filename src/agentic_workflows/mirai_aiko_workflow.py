@@ -2,9 +2,12 @@ from src.agentic_workflows.azure_agents import MiraiAikoAgent
 from src.data_storage.short_term_memory_store import MessageStore
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, END
+from cachetools import TTLCache
+import asyncio
 
 
 
+GRAPH_CACHE = TTLCache(maxsize=10, ttl=3600)
 
 
 
@@ -55,7 +58,29 @@ class GraphEngine:
 
 
 
+def get_compiled_workflow():
+    loop = asyncio.get_running_loop()
+    loop_id = id(loop)
+
+    if loop_id not in GRAPH_CACHE:
+        GRAPH_CACHE.expire()
+        wf = GraphEngine()
+        GRAPH_CACHE[loop_id] = wf.workflow().compile()
+
+    return GRAPH_CACHE[loop_id]
 
 
 
+class AgentWorkflow:
+    def __init__(self, input_data: dict):
+        self.data = input_data
 
+    @property
+    def workflow(self):
+        return get_compiled_workflow()
+
+    def execute(self):
+        return self.workflow.invoke(self.data)
+
+    async def aexecute(self):
+        return await self.workflow.ainvoke(self.data)
