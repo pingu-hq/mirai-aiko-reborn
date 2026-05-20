@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Response, Request, status, HTTPException
 from src.routers.auth import router as auth_router
-from src.agentic_workflows.mirai_aiko_workflow import router as test_router
+from src.routers.chatbot import router as chat_router
 from src.core.security import SecurityAuth
 import asyncio
 
 app = FastAPI()
 
 app.include_router(auth_router)
-app.include_router(test_router)
+app.include_router(chat_router)
 
 @app.get("/hello-env-var")
 async def hello_world():
