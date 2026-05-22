@@ -1,10 +1,25 @@
+from agentic_logic.tools.groq_web_search_tool import lifespan_context_groq_sync, lifespan_context_groq_async
+from src.data_storage.ingest_file_to_vector_store import lifespan_context_vector_store_index
 from fastapi import FastAPI, Response, Request, status, HTTPException
+from fastapi.concurrency import asynccontextmanager
 from src.routers.auth import router as auth_router
 from src.routers.chatbot import router as chat_router
-from src.core.security import SecurityAuth
 import asyncio
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.groq_sync = lifespan_context_groq_sync()
+    app.state.groq_async = lifespan_context_groq_async()
+    app.state.vector_store_index = lifespan_context_vector_store_index()
+    yield
+
+    app.state.groq_sync = None
+    app.state.groq_async = None
+    app.state.vector_store_index = None
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router)
 app.include_router(chat_router)
@@ -15,17 +30,6 @@ async def hello_world():
     from src.core.local_config import settings
     return {"message": settings.hello_world}
 
-# @app.get("/api")
-# def me(request: Request, response: Response):
-#     sa = SecurityAuth()
-#     return {"id": sa.get_cookie_id(request, response)}
-#
-# @app.get("/api/logout", status_code=status.HTTP_204_NO_CONTENT)
-# def logout_endpoint(resp: Response, req: Request):
-#     sa = SecurityAuth()
-#     if not sa.logout(req, resp):
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-#
 
 
 if __name__ == "__main__":
