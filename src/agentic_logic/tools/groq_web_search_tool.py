@@ -1,29 +1,35 @@
 from groq import Groq, AsyncGroq
+from fastapi import Request
 from core.local_config import settings
 
-groq_client: Groq | None = None
-groq_async_client: AsyncGroq | None = None
+
+
+class GroqClients:
+    def __init__(self):
+        self.api_key = settings.groq_api_key
+
+    @property
+    def groq_sync(self):
+        return Groq(api_key=self.api_key.get_secret_value())
+
+    @property
+    def groq_async(self):
+        return AsyncGroq(api_key=self.api_key.get_secret_value())
+
+def lifespan_context_groq_async():
+    return GroqClients().groq_async
+
+def lifespan_context_groq_sync():
+    return GroqClients().groq_sync
+
+
 
 class WebSearchTool:
-    def __init__(self, reconnect: bool = False):
-        if reconnect:
-            global groq_client, groq_async_client
-            groq_client = None
-            groq_async_client = None
+    def __init__(self, request: Request):
+        self.req = request
+        self.groq_sync = request.app.state.groq_sync
+        self.groq_async = request.app.state.groq_async
 
-    @property
-    def groq_conn(self):
-        global groq_client
-        if groq_client is None:
-            groq_client = Groq(api_key=settings.groq_api_key.get_secret_value())
-        return groq_client
-
-    @property
-    def agroq_conn(self):
-        global groq_async_client
-        if groq_async_client is None:
-            groq_async_client = AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
-        return groq_async_client
 
     @staticmethod
     def _groq_params():
@@ -66,15 +72,13 @@ class WebSearchTool:
         return {**model, **messages, **params}
 
     def params_to_completions(self, **params):
-        conn = self.groq_conn
-        result = conn.chat.completions.create(
+        result = self.groq_sync.chat.completions.create(
             **params
         )
         return result.choices[0].message
 
     async def params_to_completions_async(self, **params):
-        conn = self.agroq_conn
-        result = await conn.chat.completions.create(
+        result = await self.groq_async.chat.completions.create(
             **params
         )
         return result.choices[0].message
