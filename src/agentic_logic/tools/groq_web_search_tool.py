@@ -1,5 +1,5 @@
 from groq import Groq, AsyncGroq
-from src.core.local_config import settings
+from core.local_config import settings
 
 groq_client: Groq | None = None
 groq_async_client: AsyncGroq | None = None
