@@ -1,5 +1,11 @@
-from agentic_logic.tools.groq_web_search_tool import lifespan_context_groq_sync, lifespan_context_groq_async
-from data_storage.all_vector_database_connections.ingest_file_to_vector_store import lifespan_context_vector_store_index
+from agentic_logic.tools.groq_web_search_tool import (
+    lifespan_context_groq_sync,
+    lifespan_context_groq_async
+)
+from data_storage.all_vector_database_connections.main_milvus_client import (
+    lifespan_context_message_index,
+    lifespan_context_character_index
+)
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from routers.auth import router as auth_router
@@ -11,13 +17,14 @@ import asyncio
 async def lifespan(app: FastAPI):
     app.state.groq_sync = lifespan_context_groq_sync()
     app.state.groq_async = lifespan_context_groq_async()
-    app.state.vector_store_index = lifespan_context_vector_store_index()
+    app.state.character_index = lifespan_context_character_index()
+    app.state.message_index = lifespan_context_message_index()
     yield
 
     app.state.groq_sync = None
     app.state.groq_async = None
-    app.state.vector_store_index = None
-
+    app.state.character_index = None
+    app.state.message_index = None
 
 app = FastAPI(lifespan=lifespan)
 
