@@ -1,61 +1,23 @@
 from llama_index.core import VectorStoreIndex
-from llama_index.core.schema import TextNode, BaseNode, MetadataMode, NodeWithScore
-from llama_index.vector_stores.milvus import MilvusVectorStore
+from llama_index.core.schema import TextNode, BaseNode, NodeWithScore
 from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
-from llama_index.embeddings.cohere import CohereEmbedding
-from src.core.local_config import settings
-from datetime import timedelta, datetime, timezone
-from functools import lru_cache
+from fastapi import Request
+from datetime import datetime, timezone
 
 
 
-class ConfigLoader:
-    def __init__(self):
-        self.ttl = int(timedelta(days=7).total_seconds())
-        self.coll_name = "temporary_message_collection"
-        self.uri = settings.milvus_uri
-        self.token = settings.milvus_token
-        self.api_key = settings.cohere_api_key
-
-    @property
-    def load_vector_store(self):
-        return MilvusVectorStore(
-            uri=self.uri.get_secret_value(),
-            token=self.token.get_secret_value(),
-            collection_name=self.coll_name,
-            overwrite=False,
-            dim=1024,
-            embedding_field="embeddings",
-            search_config={"nprobe": 60},
-            similarity_metric="COSINE",
-            consistency_level="Session",
-            collection_properties={"collection.ttl.seconds": self.ttl}
-        )
-
-    @property
-    def load_embedding_model(self):
-        return CohereEmbedding(
-            model_name="embed-multilingual-v3.0",
-            api_key=self.api_key.get_secret_value()
-        )
-
-    @property
-    def load_index(self):
-        return VectorStoreIndex.from_vector_store(
-            use_async=True,
-            vector_store=self.load_vector_store,
-            embed_model=self.load_embedding_model
-        )
-
-@lru_cache()
-def config_loader():
-    return ConfigLoader()
-
-class VectorDataStore:
-    def __init__(self, user_id: str):
-        self.config_loader = config_loader()
-        self.index = self.config_loader.load_index
+class MessageVectorStore:
+    def __init__(self, user_id: str, request: Request):
+        self.request = request
         self._id = user_id
+
+    @property
+    def index(self) -> VectorStoreIndex:
+        return self.request.app.state.message_index
+
+    @property
+    def id(self):
+        return self._id
 
     async def _ingest_text_to_index(self, text: str, metadata: dict | None):
         try:
@@ -71,7 +33,7 @@ class VectorDataStore:
     def filters(self):
         return MetadataFilters(
             filters=[
-                ExactMatchFilter(key="name_of_user", value=self._id),
+                ExactMatchFilter(key="name_of_user", value=self.id),
             ]
         )
 
@@ -105,7 +67,7 @@ class VectorDataStore:
     async def ingest_text(self, content: str, metadata: dict | None = None):
         _date = datetime.now(timezone.utc)
         default_metadata = {
-            "name_of_user" : self._id,
+            "name_of_user" : self.id,
             "date_created": _date.date().isoformat(),
             "time_created": _date.time().isoformat(),
             "timezone":"utc"
