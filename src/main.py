@@ -1,9 +1,9 @@
 from agentic_logic.tools.groq_web_search_tool import lifespan_context_groq_sync, lifespan_context_groq_async
-from src.data_storage.ingest_file_to_vector_store import lifespan_context_vector_store_index
-from fastapi import FastAPI, Response, Request, status, HTTPException
+from data_storage.all_vector_database_connections.ingest_file_to_vector_store import lifespan_context_vector_store_index
+from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
-from src.routers.auth import router as auth_router
-from src.routers.chatbot import router as chat_router
+from routers.auth import router as auth_router
+from routers.chatbot import router as chat_router
 import asyncio
 
 
