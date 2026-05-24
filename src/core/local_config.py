@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     AZURE_TENANT_ID: SecretStr = None
     AZURE_CLIENT_SECRET: SecretStr = None
     AZURE_AI_PROJECT_ENDPOINT: SecretStr = None
+    AZURE_ENDPOINT: SecretStr = None
 
     TEMP_FIRST_AGENT: SecretStr = None
 
@@ -99,6 +100,12 @@ class Settings(BaseSettings):
         if not self.TEMP_FIRST_AGENT:
             self.value_error()
         return self.TEMP_FIRST_AGENT
+
+    @property
+    def azure_endpoint(self):
+        if not self.AZURE_ENDPOINT:
+            self.value_error()
+        return self.AZURE_ENDPOINT
 
 
     model_config = SettingsConfigDict(
