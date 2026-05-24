@@ -120,3 +120,44 @@ class DeepSeekLLM(LLMBase):
     async def run_async(self):
         completion = await self.chat_completion_async(**self.additional_params)
         return completion.choices[0].message.content
+
+
+class ReasoningLLM(LLMBase):
+    additional_params: dict = {}
+    def __init__(self, request: Request | None, content: str | list[dict]):
+        super().__init__(request=request, content=content, model_type="LLM_TYPE_C")
+        self.additional_params = {}
+
+    def parameter_requirements(self, **kwargs):
+        self.additional_params = kwargs
+        return self
+
+
+    def run(self):
+        completion = self.chat_completion_sync(**self.additional_params)
+        return completion.choices[0].message.content
+
+    async def run_async(self):
+        completion = await self.chat_completion_async(**self.additional_params)
+        return completion.choices[0].message.content
+
+
+
+class FastNonReasoningLLM(LLMBase):
+    additional_params: dict = {}
+    def __init__(self, request: Request | None, content: str | list[dict]):
+        super().__init__(request=request, content=content, model_type="LLM_TYPE_D")
+        self.additional_params = {}
+
+    def parameter_requirements(self, **kwargs):
+        self.additional_params = kwargs
+        return self
+
+
+    def run(self):
+        completion = self.chat_completion_sync(**self.additional_params)
+        return completion.choices[0].message.content
+
+    async def run_async(self):
+        completion = await self.chat_completion_async(**self.additional_params)
+        return completion.choices[0].message.content
