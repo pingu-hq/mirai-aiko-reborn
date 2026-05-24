@@ -13,7 +13,7 @@ class CharacterVectorStore:
 
     @property
     def index(self) -> VectorStoreIndex:
-        return self.request.app.state.vector_store_index
+        return self.request.app.state.character_index
 
     @staticmethod
     def _memory_organizer(raw_memories: list[NodeWithScore]):
