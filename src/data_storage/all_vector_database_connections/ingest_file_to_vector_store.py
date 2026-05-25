@@ -10,8 +10,8 @@ import time
 
 
 
-OVERWRITE_EACH_INSTANCE = False
-INGEST_DATA_TO_INDEX = False
+CREATE_NEW_FRESH_VECTOR = False
+ALLOW_DATA_SOURCE_TO_BE_SAVED_IN_VECTOR = False
 
 
 
@@ -28,7 +28,7 @@ class VectorClientLoader:
             uri=self.uri.get_secret_value(),
             token=self.token.get_secret_value(),
             collection_name=self.coll_name,
-            overwrite=OVERWRITE_EACH_INSTANCE,
+            overwrite=CREATE_NEW_FRESH_VECTOR,
             dim=1024,
             embedding_field="embeddings",
             search_config={"nprobe": 60},
@@ -54,7 +54,8 @@ class VectorClientLoader:
 DATA_SOURCE_PATH = None
 
 def ingest_pipeline(name_of_file: str | None = None):
-    if not INGEST_DATA_TO_INDEX:
+    if not ALLOW_DATA_SOURCE_TO_BE_SAVED_IN_VECTOR:
+        print("Please set the ALLOW_DATA_SOURCE_TO_BE_SAVED_IN_VECTOR to True if you want the file to go to vector database")
         return None
     if name_of_file is None:
         return None
