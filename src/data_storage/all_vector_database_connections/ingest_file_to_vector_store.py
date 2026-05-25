@@ -51,6 +51,13 @@ class VectorClientLoader:
             embed_model=self.load_embedding_model
         )
 
+
+# some_data_sets_outside_my_project_scope = (
+#     Path(__file__).resolve()
+#     .parent.parent.parent.parent.parent.absolute()
+#     / "Data-Sources-Docs"
+#     / "mirai-aiko-knowledge"
+# )
 DATA_SOURCE_PATH = None
 
 def ingest_pipeline(name_of_file: str | None = None):
@@ -64,7 +71,9 @@ def ingest_pipeline(name_of_file: str | None = None):
 
     global DATA_SOURCE_PATH
     if DATA_SOURCE_PATH is None:
-        DATA_SOURCE_PATH = Path(__file__).resolve().parent / "data_sources"
+        DATA_SOURCE_PATH = Path(__file__).resolve().parent.parent / "data_sources"
+
+    print(f"Current path is : {DATA_SOURCE_PATH}")
 
     time_of_path_creation = time.monotonic()
     print("Time of creating and finding path is: ", (time_of_path_creation - start_time_of_path))
