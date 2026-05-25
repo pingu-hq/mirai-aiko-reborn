@@ -9,7 +9,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 import os
 
-load_dotenv(Path(__file__).parent.parent.parent.resolve(True) / "secrets" / "agent_configs.txt")
+load_dotenv(Path(__file__).parent.parent.parent.resolve(True) / "secrets" / "llm_config.txt")
 
 def load_azure_client():
     params = {
