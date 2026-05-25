@@ -1,7 +1,7 @@
 from typing import Any
 from fastapi import HTTPException, status
 from openai import AsyncOpenAI, OpenAI
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 from core.local_config import settings
 from fastapi import Request
 from dotenv import load_dotenv
@@ -101,63 +101,63 @@ class LLMBase(ABC, BaseModel):
 
 
 class DeepSeekLLM(LLMBase):
-    additional_params: dict = {}
+    _additional_params: dict = PrivateAttr(default=dict)
 
     def __init__(self, request: Request | None, content: str | list[dict]):
         super().__init__(request=request, content=content, model_type="LLM_TYPE_A")
-        self.additional_params = {}
+        self._additional_params = {}
 
 
     def parameter_requirements(self, **kwargs):
-        self.additional_params = kwargs
+        self._additional_params = kwargs.copy()
         return self
 
 
     def run(self):
-        completion = self.chat_completion_sync(**self.additional_params)
+        completion = self.chat_completion_sync(**self._additional_params)
         return completion.choices[0].message.content
 
     async def run_async(self):
-        completion = await self.chat_completion_async(**self.additional_params)
+        completion = await self.chat_completion_async(**self._additional_params)
         return completion.choices[0].message.content
 
 
 class ReasoningLLM(LLMBase):
-    additional_params: dict = {}
+    _additional_params: dict = PrivateAttr(default=dict)
     def __init__(self, request: Request | None, content: str | list[dict]):
         super().__init__(request=request, content=content, model_type="LLM_TYPE_C")
-        self.additional_params = {}
+        self._additional_params = {}
 
     def parameter_requirements(self, **kwargs):
-        self.additional_params = kwargs
+        self._additional_params = kwargs.copy()
         return self
 
 
     def run(self):
-        completion = self.chat_completion_sync(**self.additional_params)
+        completion = self.chat_completion_sync(**self._additional_params)
         return completion.choices[0].message.content
 
     async def run_async(self):
-        completion = await self.chat_completion_async(**self.additional_params)
+        completion = await self.chat_completion_async(**self._additional_params)
         return completion.choices[0].message.content
 
 
 
 class FastNonReasoningLLM(LLMBase):
-    additional_params: dict = {}
+    _additional_params: dict = PrivateAttr(default=dict)
     def __init__(self, request: Request | None, content: str | list[dict]):
         super().__init__(request=request, content=content, model_type="LLM_TYPE_D")
-        self.additional_params = {}
+        self._additional_params = {}
 
     def parameter_requirements(self, **kwargs):
-        self.additional_params = kwargs
+        self._additional_params = kwargs.copy()
         return self
 
 
     def run(self):
-        completion = self.chat_completion_sync(**self.additional_params)
+        completion = self.chat_completion_sync(**self._additional_params)
         return completion.choices[0].message.content
 
     async def run_async(self):
-        completion = await self.chat_completion_async(**self.additional_params)
+        completion = await self.chat_completion_async(**self._additional_params)
         return completion.choices[0].message.content
