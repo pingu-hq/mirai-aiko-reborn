@@ -10,8 +10,10 @@ import time
 
 
 
+OVERWRITE_EACH_INSTANCE = False
+INGEST_DATA_TO_INDEX = False
 
-IS_DEVELOPMENT = False
+
 
 class VectorClientLoader:
     def __init__(self):
@@ -26,7 +28,7 @@ class VectorClientLoader:
             uri=self.uri.get_secret_value(),
             token=self.token.get_secret_value(),
             collection_name=self.coll_name,
-            overwrite=IS_DEVELOPMENT,
+            overwrite=OVERWRITE_EACH_INSTANCE,
             dim=1024,
             embedding_field="embeddings",
             search_config={"nprobe": 60},
@@ -52,7 +54,7 @@ class VectorClientLoader:
 DATA_SOURCE_PATH = None
 
 def ingest_pipeline(name_of_file: str | None = None):
-    if not IS_DEVELOPMENT:
+    if not INGEST_DATA_TO_INDEX:
         return None
     if name_of_file is None:
         return None
