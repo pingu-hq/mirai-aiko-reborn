@@ -3,7 +3,6 @@ from redis.asyncio import Redis
 from asyncio.locks import Lock
 from datetime import timedelta
 from cachetools import TTLCache
-from functools import lru_cache
 from azure.ai.projects import AIProjectClient
 from azure.identity import ClientSecretCredential
 from asyncio.threads import to_thread
@@ -66,19 +65,6 @@ class RedisBaseClass:
             return await self.redis.setex(name=user_id, value=serialized, time=time_to_live)
 
 
-
-@lru_cache()
-def azure_openai_loader():
-    cred = ClientSecretCredential(
-        tenant_id=settings.tenant_id.get_secret_value(),
-        client_id=settings.client_id.get_secret_value(),
-        client_secret=settings.client_secret.get_secret_value(),
-    )
-    client = AIProjectClient(
-        credential=cred,
-        endpoint=settings.ai_project_endpoint.get_secret_value()
-    )
-    return client.get_openai_client()
 
 def lifespan_context_azure_client():
     _secret_credentials = ClientSecretCredential(
