@@ -3,6 +3,12 @@ from redis.asyncio import Redis
 from asyncio.locks import Lock
 from datetime import timedelta
 from cachetools import TTLCache
+from functools import lru_cache
+from azure.ai.projects import AIProjectClient
+from azure.identity import ClientSecretCredential
+from asyncio.threads import to_thread
+from fastapi import Request
+from src.core.local_config import settings
 import json
 
 
@@ -61,14 +67,59 @@ class RedisBaseClass:
 
 
 
+@lru_cache()
+def azure_openai_loader():
+    cred = ClientSecretCredential(
+        tenant_id=settings.tenant_id.get_secret_value(),
+        client_id=settings.client_id.get_secret_value(),
+        client_secret=settings.client_secret.get_secret_value(),
+    )
+    client = AIProjectClient(
+        credential=cred,
+        endpoint=settings.ai_project_endpoint.get_secret_value()
+    )
+    return client.get_openai_client()
+
+def lifespan_context_azure_client():
+    _secret_credentials = ClientSecretCredential(
+        tenant_id=settings.tenant_id.get_secret_value(),
+        client_id=settings.client_id.get_secret_value(),
+        client_secret=settings.client_secret.get_secret_value(),
+    )
+    _azure_client = AIProjectClient(
+        credential=_secret_credentials,
+        endpoint=settings.ai_project_endpoint.get_secret_value()
+    )
+    return _azure_client.get_openai_client()
 
 
 
+class Conversation:
+    def __init__(self, user_id: str, client: Request | None = None):
+        self.memory = RedisBaseClass()
+        self._client = client
+        self._user_id = user_id
 
 
+    async def get_conversation_id(self):
+        existing_memory = await self.memory._get(self.user_id)
+        if not existing_memory:
+            new_conv = await to_thread(self.client.conversations.create)
+            await self.memory._add(self.user_id, new_conv.id)
+        return existing_memory
 
 # async def main():
 #     pass
+    @property
+    def user_id(self):
+        return f"conversation@{self._user_id}"
+
+    @property
+    def client(self):
+        if self._client is None:
+            return azure_openai_loader()
+        return self._client.app.state.azure_client
+
 #
 # if __name__ == "__main__":
 # import asyncio
