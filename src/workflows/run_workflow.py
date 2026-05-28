@@ -2,13 +2,12 @@ from typing import Any
 from redis.asyncio import Redis
 from asyncio.locks import Lock
 from datetime import timedelta
+from cachetools import TTLCache
 import json
 
 
-
+_REDIS_LOCK_HOLDER = None
 _REDIS_CLIENT = None
-_REDIS_LOCK = None
-_REDIS_EXPIRE_TIME = None
 
 def redis_client() -> Redis:
     global _REDIS_CLIENT
@@ -16,46 +15,61 @@ def redis_client() -> Redis:
         _REDIS_CLIENT = Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True, socket_timeout=5)
     return _REDIS_CLIENT
 
-def redis_lock() -> Lock:
-    global _REDIS_LOCK
-    if _REDIS_LOCK is None:
-        _REDIS_LOCK = Lock()
-    return _REDIS_LOCK
+def global_lock_holder_object() -> TTLCache:
+    global _REDIS_LOCK_HOLDER
+    if _REDIS_LOCK_HOLDER is None:
+        _REDIS_LOCK_HOLDER = TTLCache(maxsize=1000, ttl=timedelta(hours=2).total_seconds())
+    return _REDIS_LOCK_HOLDER
 
-def redis_expire_time() -> timedelta:
-    global _REDIS_EXPIRE_TIME
-    if _REDIS_EXPIRE_TIME is None:
-        _REDIS_EXPIRE_TIME = timedelta(days=1)
-    return _REDIS_EXPIRE_TIME
+def redis_lock_per_user(user_id: str) -> Lock:
+    lock_holder = global_lock_holder_object()
 
-class ClientState:
-    def __init__(self, user_id: Any):
+    if user_id not in lock_holder:
+        lock_holder.expire()
+        lock_holder[user_id] = Lock()
+
+    return lock_holder[user_id]
+
+
+
+
+
+
+class RedisBaseClass:
+    def __init__(self):
         self.redis = redis_client()
-        self.lock = redis_lock()
-        self.ttl = redis_expire_time()
-        self.user_id = user_id
 
-    async def _get(self):
-        async with self.lock:
-            serialized = await self.redis.get(self.user_id)
+    async def _get(self, user_id: Any):
+        lock = redis_lock_per_user(user_id)
+        async with lock:
+            serialized = await self.redis.get(user_id)
             if serialized:
                 return json.loads(serialized)
             return None
 
-    async def _add(self, data: Any):
-        async with self.lock:
+    async def _add(self,user_id: Any, data: Any):
+        lock = redis_lock_per_user(user_id)
+        async with lock:
             serialized = json.dumps(data)
-            return await self.redis.set(name=self.user_id, value=serialized)
+            return await self.redis.set(name=user_id, value=serialized)
 
-    async def _add_with_ttl(self, data: Any):
-        async with self.lock:
+    async def _add_with_ttl(self,user_id: Any, data: Any, time_to_live: int):
+        lock = redis_lock_per_user(user_id)
+        async with lock:
             serialized = json.dumps(data)
-            return await self.redis.setex(name=self.user_id, value=serialized, time=self.ttl)
+            return await self.redis.setex(name=user_id, value=serialized, time=time_to_live)
 
 
-async def main():
-    pass
 
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+
+
+
+
+
+
+# async def main():
+#     pass
+#
+# if __name__ == "__main__":
+# import asyncio
+#     asyncio.run(main())
