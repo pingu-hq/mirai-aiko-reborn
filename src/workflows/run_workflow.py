@@ -81,32 +81,26 @@ def lifespan_context_azure_client():
 
 
 class Conversation:
-    def __init__(self, user_id: str, client: Request | None = None):
+    def __init__(self, user_id: str, request: Request):
         self.memory = RedisBaseClass()
-        self._client = client
+        self.request = request
         self._user_id = user_id
 
 
-    async def get_conversation_id(self):
+    async def get_conversation_id(self) -> str:
         existing_memory = await self.memory._get(self.user_id)
+
         if not existing_memory:
             new_conv = await to_thread(self.client.conversations.create)
             await self.memory._add(self.user_id, new_conv.id)
+            return new_conv.id
+
         return existing_memory
 
-# async def main():
-#     pass
     @property
     def user_id(self):
         return f"conversation@{self._user_id}"
 
     @property
     def client(self):
-        if self._client is None:
-            return azure_openai_loader()
-        return self._client.app.state.azure_client
-
-#
-# if __name__ == "__main__":
-# import asyncio
-#     asyncio.run(main())
+        return self.request.app.state.azure_client
