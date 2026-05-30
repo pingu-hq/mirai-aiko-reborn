@@ -3,42 +3,37 @@ from pymongo.asynchronous.collection import AsyncCollection
 import pymongo.errors
 from src.core.local_config import settings
 from src.core.security import SecurityAuth
-from functools import lru_cache
 import ulid
 
 
 
-@lru_cache()
-def users_collection() -> AsyncCollection:
-    _client = AsyncMongoClient(settings.mongo_db.get_secret_value())
-    _db = _client["mirai-aiko-database"]
-    return _db["users"]
 
 _CLIENT_MONGO_ASYNC = None
 
-def mongo_async_main_client() -> AsyncMongoClient:
+def get_client() -> AsyncMongoClient:
     global _CLIENT_MONGO_ASYNC
     if _CLIENT_MONGO_ASYNC is None:
         _CLIENT_MONGO_ASYNC = AsyncMongoClient(settings.mongo_db.get_secret_value())
     return _CLIENT_MONGO_ASYNC
 
-_users = None
-def user_collection_v1():
-    global _users
-    if _users is None:
-        _client = mongo_async_main_client()
-        _db = _client["mirai-aiko-database"]
-        _users = _db["users"]
-    return _users
+def get_db():
+    _client = get_client()
+    return _client["mirai-aiko-database"]
 
-_conversations = None
-def conversation_collection_v1():
-    global _conversations
-    if _conversations is None:
-        _client = mongo_async_main_client()
-        _db = _client["mirai-aiko-database"]
-        _conversations = _db["conversations"]
-    return _conversations
+def get_collection_by_name(name: str):
+    _db = get_db()
+    return _db[name]
+
+
+def users_collection():
+    return get_collection_by_name("users")
+
+def conversation_collection():
+    return get_collection_by_name("conversations")
+
+
+
+
 
 class MongoDbDataStore:
     def __init__(self):
@@ -47,6 +42,10 @@ class MongoDbDataStore:
     @property
     def users(self) -> AsyncCollection:
         return users_collection()
+
+    @property
+    def conversations(self) -> AsyncCollection:
+        return conversation_collection()
 
 
     async def create_user(self, email: str, password: str, name: str):
