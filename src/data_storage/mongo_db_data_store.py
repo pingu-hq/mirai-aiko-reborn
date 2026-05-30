@@ -14,6 +14,32 @@ def users_collection() -> AsyncCollection:
     _db = _client["mirai-aiko-database"]
     return _db["users"]
 
+_CLIENT_MONGO_ASYNC = None
+
+def mongo_async_main_client() -> AsyncMongoClient:
+    global _CLIENT_MONGO_ASYNC
+    if _CLIENT_MONGO_ASYNC is None:
+        _CLIENT_MONGO_ASYNC = AsyncMongoClient(settings.mongo_db.get_secret_value())
+    return _CLIENT_MONGO_ASYNC
+
+_users = None
+def user_collection_v1():
+    global _users
+    if _users is None:
+        _client = mongo_async_main_client()
+        _db = _client["mirai-aiko-database"]
+        _users = _db["users"]
+    return _users
+
+_conversations = None
+def conversation_collection_v1():
+    global _conversations
+    if _conversations is None:
+        _client = mongo_async_main_client()
+        _db = _client["mirai-aiko-database"]
+        _conversations = _db["conversations"]
+    return _conversations
+
 class MongoDbDataStore:
     def __init__(self):
         self.auth = SecurityAuth()
