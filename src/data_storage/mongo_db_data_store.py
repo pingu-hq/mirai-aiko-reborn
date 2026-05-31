@@ -84,6 +84,15 @@ class MongoDbDataStore:
         await self.users.create_index("email", unique=True)
         await self.users.create_index("external_id", unique=True)
 
+    async def get_conversation_info(self, user_id: str):
+        conversation_info = self.conversations.find_one(
+            {"external_id": user_id},
+            sort=[("_id", -1)]
+        )
+        if not conversation_info or conversation_info == "":
+            return ""
+        return conversation_info
+
 # import asyncio
 # cleaning = MongoDbDataStore()
 # asyncio.run(cleaning.reset_users_collection())
