@@ -1,9 +1,9 @@
 from redis import Redis
 
 
-def get_jwt_redis_client():
-    if hasattr(get_jwt_redis_client, "client"):
-        get_jwt_redis_client.client = Redis(
+def jti_redis_client():
+    if hasattr(jti_redis_client, "client"):
+        jti_redis_client.client = Redis(
             host='127.0.0.1',
             port=6379,
             db=0,
@@ -11,11 +11,11 @@ def get_jwt_redis_client():
             socket_timeout=5,
             retry_on_timeout=True
         )
-    return get_jwt_redis_client.client
+    return jti_redis_client.client
 
 class JtiCacheRepository:
     def __init__(self):
-        self.client = get_jwt_redis_client()
+        self.client = jti_redis_client()
 
 
     def get_value(self, name):
