@@ -1,3 +1,4 @@
+from datetime import timedelta
 from redis import Redis
 
 
@@ -18,10 +19,10 @@ class JtiCacheRepository:
         self.client = jti_redis_client()
 
 
-    def get_value(self, name):
+    def get_value(self, name:str):
         return self.client.get(name=name)
 
-    def set_value(self,name, time, value):
+    def set_value(self,name: str, time: int | timedelta, value):
         self.client.setex(name=name, time=time, value=value )
 
     def delete(self, name):
