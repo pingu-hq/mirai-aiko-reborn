@@ -3,7 +3,7 @@ from redis import Redis
 
 
 def jti_redis_client():
-    if hasattr(jti_redis_client, "client"):
+    if not hasattr(jti_redis_client, "client"):
         jti_redis_client.client = Redis(
             host='127.0.0.1',
             port=6379,
