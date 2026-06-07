@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     AZURE_ENDPOINT: SecretStr = None
 
     TEMP_FIRST_AGENT: SecretStr = None
+    JWT_SECRET_KEY: SecretStr = None
 
 
     @staticmethod
@@ -107,6 +108,11 @@ class Settings(BaseSettings):
             self.value_error()
         return self.AZURE_ENDPOINT
 
+    @property
+    def jwt_secret_key(self):
+        if not self.JWT_SECRET_KEY:
+            self.value_error()
+        return self.JWT_SECRET_KEY
 
     model_config = SettingsConfigDict(
         env_file=env_file_path,
