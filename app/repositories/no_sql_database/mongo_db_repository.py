@@ -1,6 +1,5 @@
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase, AsyncCollection
-from app.core.local_config import settings
 from app.core.state import app_state
 
 
@@ -15,29 +14,37 @@ from app.core.state import app_state
 
 
 class AsyncMongoDatabase:
+    _database_name = "database-name-test"
 
     @property
-    def db(self) -> AsyncDatabase:
+    def client(self) -> AsyncMongoClient:
+        if not app_state.mongo_db_client:
+            raise RuntimeError("MongoDB client not initialized")
         return app_state.mongo_db_client
 
+
+    @property
+    def database(self) -> AsyncDatabase:
+        return self.client[self._database_name]
+
     def get_collection_by_name(self, collection_name: str) -> AsyncCollection:
-        return self.db[collection_name]
+        return self.database[collection_name]
 
 
 class UsersCollectionRepository:
     def __init__(self):
         self.collection_name = "users"
+        self.db = AsyncMongoDatabase()
 
     @property
     def users(self) -> AsyncCollection:
-        _db = AsyncMongoDatabase()
-        return _db.get_collection_by_name(self.collection_name)
+        return self.db.get_collection_by_name(self.collection_name)
 
 class ConversationsCollectionRepository:
     def __init__(self):
         self.collection_name = "conversations"
+        self.db = AsyncMongoDatabase()
 
     @property
     def conversations(self):
-        _db = AsyncMongoDatabase()
-        return _db.get_collection_by_name(self.collection_name)
+        return self.db.get_collection_by_name(self.collection_name)
