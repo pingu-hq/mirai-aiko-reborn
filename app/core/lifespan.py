@@ -95,14 +95,17 @@ def get_message_store_index():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app_state.redis_jwt_client = get_jwt_redis_client()
-    app_state.mongo_db_client = get_mongo_db_main_client()
-    app_state.milvus_character_index = get_character_knowledge_index()
-    app_state.milvus_message_index = get_message_store_index()
+    state = app_state
+    state.redis_jwt_client = get_jwt_redis_client()
+    state.mongo_db_client = get_mongo_db_main_client()
+    state.milvus_character_index = get_character_knowledge_index()
+    state.milvus_message_index = get_message_store_index()
 
-    yield
+    try:
+        yield
 
-    app_state.redis_jwt_client.close()
-    app_state.milvus_message_index = None
-    app_state.milvus_character_index = None
-    app_state.mongo_db_client = None
+    finally:
+        state.redis_jwt_client.close()
+        state.milvus_message_index = None
+        state.milvus_character_index = None
+        state.mongo_db_client = None
