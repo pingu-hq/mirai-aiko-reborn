@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from app.routers.auth import router as auth_router
+from app.core.lifespan import lifespan
 
 
 app = FastAPI(
     version="0.1.0",
     title="Mirai Aiko (Reborn Version)",
+    lifespan=lifespan
 )
 app.include_router(auth_router)
 
