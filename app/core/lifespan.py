@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from pymongo.asynchronous.database import AsyncDatabase
 from pymongo import AsyncMongoClient
 from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.milvus import MilvusVectorStore
@@ -23,10 +22,8 @@ def get_jwt_redis_client():
             retry_on_timeout=True
         )
 
-def get_mongo_db_main_client() -> AsyncDatabase:
-    _database_name = "database-name-test"
-    _mongo_client = AsyncMongoClient(settings.mongo_db.get_secret_value())
-    return _mongo_client[_database_name]
+def get_mongo_db_main_client() -> AsyncMongoClient:
+    return AsyncMongoClient(settings.mongo_db.get_secret_value())
 
 
 
