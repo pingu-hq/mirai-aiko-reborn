@@ -90,6 +90,62 @@ def get_message_store_index():
     return milvus_object.message_store_index
 
 
+class LifespanResources:
+
+    @staticmethod
+    def get_jwt_redis_client():
+        return Redis(
+            host='127.0.0.1',
+            port=6379,
+            db=0,
+            max_connections=15,
+            socket_timeout=5,
+            retry_on_timeout=True
+        )
+
+    @staticmethod
+    def get_mongo_db_main_client() -> AsyncMongoClient:
+        return AsyncMongoClient(settings.mongo_db.get_secret_value())
+
+    @staticmethod
+    def get_milvus_character_knowledge():
+        other_params = LifespanResources._vector_config_params()
+        return MilvusVectorStore(
+            collection_name="character_knowledge_base",
+            **other_params
+        )
+
+    @staticmethod
+    def get_milvus_message_store():
+        _ttl = int(timedelta(days=7).total_seconds())
+        other_params = LifespanResources._vector_config_params()
+        return MilvusVectorStore(
+            collection_name="temporary_message_collection",
+            collection_properties={"collection.ttl.seconds": _ttl},
+            **other_params
+        )
+
+    @staticmethod
+    def cohere_embed_model():
+        return CohereEmbedding(
+            model_name="embed-multilingual-v3.0",
+            api_key=settings.cohere_api_key.get_secret_value()
+        )
+
+    @staticmethod
+    def _vector_config_params():
+        return {
+            "uri" : settings.milvus_uri.get_secret_value(),
+            "token" : settings.milvus_token.get_secret_value(),
+            "overwrite" : False,
+            "dim" : 1024,
+            "embedding_field" : "embeddings",
+            "search_config" : {"nprobe": 60},
+            "similarity_metric" :  "COSINE",
+            "consistency_level" : "Session",
+        }
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     state = app_state
