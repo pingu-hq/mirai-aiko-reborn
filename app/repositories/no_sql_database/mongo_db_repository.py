@@ -1,23 +1,24 @@
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase, AsyncCollection
 from app.core.local_config import settings
+from app.core.state import app_state
 
 
 
-def get_db() -> AsyncDatabase:
-    if not hasattr(get_db, "database"):
-        _database_name = "database-name-test"
-        _mongo_client = AsyncMongoClient(settings.mongo_db.get_secret_value())
-        get_db.database = _mongo_client[_database_name]
-
-    return get_db.database
+# def get_db() -> AsyncDatabase:
+#     if not hasattr(get_db, "database"):
+#         _database_name = "database-name-test"
+#         _mongo_client = AsyncMongoClient(settings.mongo_db.get_secret_value())
+#         get_db.database = _mongo_client[_database_name]
+#
+#     return get_db.database
 
 
 class AsyncMongoDatabase:
 
     @property
     def db(self) -> AsyncDatabase:
-        return get_db()
+        return app_state.mongo_db_client
 
     def get_collection_by_name(self, collection_name: str) -> AsyncCollection:
         return self.db[collection_name]
