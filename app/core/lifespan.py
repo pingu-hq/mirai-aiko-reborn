@@ -5,6 +5,7 @@ from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
 from datetime import timedelta
+from redis import Redis
 
 
 from app.core.local_config import settings
@@ -12,7 +13,6 @@ from app.core.state import app_state
 
 
 def get_jwt_redis_client():
-    from redis import Redis
     return Redis(
             host='127.0.0.1',
             port=6379,
@@ -151,14 +151,10 @@ async def lifespan(app: FastAPI):
     state = app_state
     state.redis_jwt_client = get_jwt_redis_client()
     state.mongo_db_client = get_mongo_db_main_client()
-    state.milvus_character_index = get_character_knowledge_index()
-    state.milvus_message_index = get_message_store_index()
 
     try:
         yield
 
     finally:
         state.redis_jwt_client.close()
-        state.milvus_message_index = None
-        state.milvus_character_index = None
         state.mongo_db_client = None
