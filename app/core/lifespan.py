@@ -4,6 +4,7 @@ from pymongo import AsyncMongoClient
 from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
+from asyncio import to_thread
 from datetime import timedelta
 from redis import Redis
 
@@ -149,12 +150,50 @@ class LifespanResources:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     state = app_state
-    state.redis_jwt_client = get_jwt_redis_client()
-    state.mongo_db_client = get_mongo_db_main_client()
+    errors = []
+    try:
+        state.redis_jwt_client = LifespanResources.get_jwt_redis_client()
+    except Exception as e:
+        errors.append(f"Redis Jwt init failed: {str(e)}")
+        state.redis_jwt_client = None
+
+    try:
+        state.mongo_db_client = LifespanResources.get_mongo_db_main_client()
+    except Exception as e:
+        errors.append(f"MongoDB async client init failed: {str(e)}")
+        state.mongo_db_client = None
+
+    try:
+        state.milvus_character_vector = LifespanResources.get_milvus_character_knowledge()
+    except Exception as e:
+        errors.append(f"Milvus character vector init failed: {str(e)}")
+        state.milvus_character_vector = None
+
+    try:
+        state.milvus_message_vector = LifespanResources.get_milvus_message_store()
+    except Exception as e:
+        errors.append(f"Milvus message vector init failed: {str(e)}")
+        state.milvus_message_vector = None
+
+    if errors:
+        raise RuntimeError(f"Startup failed: {'; '.join(errors)}")
 
     try:
         yield
 
     finally:
-        state.redis_jwt_client.close()
-        state.mongo_db_client = None
+        if state.redis_jwt_client:
+            print("Redis client released!")
+            await to_thread(state.redis_jwt_client.close)
+
+        if state.mongo_db_client:
+            print("MongoDB client released!")
+            await state.mongo_db_client.close()
+
+        if state.milvus_character_vector:
+            print("Milvus character vector released!")
+            await to_thread(state.milvus_character_vector.client.close)
+
+        if state.milvus_message_vector:
+            print("Milvus message vector released!")
+            await to_thread(state.milvus_message_vector.client.close)
