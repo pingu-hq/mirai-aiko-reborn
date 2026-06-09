@@ -10,6 +10,7 @@ from asyncio import to_thread
 from datetime import timedelta
 from redis import Redis
 from httpx import AsyncClient, Client, Limits
+from groq import AsyncGroq
 
 
 from app.core.local_config import settings
@@ -18,6 +19,26 @@ from app.core.state import app_state
 
 
 class LifespanResources:
+
+    @staticmethod
+    def _vector_config_params():
+        return {
+            "uri" : settings.milvus_uri.get_secret_value(),
+            "token" : settings.milvus_token.get_secret_value(),
+            "overwrite" : False,
+            "dim" : 1024,
+            "embedding_field" : "embeddings",
+            "search_config" : {"nprobe": 60},
+            "similarity_metric" :  "COSINE",
+            "consistency_level" : "Session",
+        }
+
+    @staticmethod
+    def _limits():
+        return Limits(
+            max_keepalive_connections=10,
+            max_connections=20
+        )
 
     @staticmethod
     def get_jwt_redis_client():
@@ -96,26 +117,10 @@ class LifespanResources:
         )
         return _azure_client.get_openai_client()
 
-    @staticmethod
-    def _vector_config_params():
-        return {
-            "uri" : settings.milvus_uri.get_secret_value(),
-            "token" : settings.milvus_token.get_secret_value(),
-            "overwrite" : False,
-            "dim" : 1024,
-            "embedding_field" : "embeddings",
-            "search_config" : {"nprobe": 60},
-            "similarity_metric" :  "COSINE",
-            "consistency_level" : "Session",
-        }
 
     @staticmethod
-    def _limits():
-        return Limits(
-            max_keepalive_connections=10,
-            max_connections=20
-        )
-
+    def get_groq_client():
+        return AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -175,6 +180,12 @@ async def lifespan(app: FastAPI):
         errors.append(f"Azure client init failed: {str(e)}")
         state.azure_client = None
 
+    try:
+        state.groq_client = LifespanResources.get_groq_client()
+    except Exception as e:
+        errors.append(f"Groq client init failed: {str(e)}")
+        state.groq_client = None
+
 
 
 
@@ -216,3 +227,7 @@ async def lifespan(app: FastAPI):
         if state.azure_client:
             await to_thread(state.azure_client.close)
             print("Azure client released!")
+
+        if state.groq_client:
+            await state.groq_client.close()
+            print("Groq client released!")
