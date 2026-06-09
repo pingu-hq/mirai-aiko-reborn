@@ -198,7 +198,9 @@ class LifespanResources:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("Starting lifespan")
     state = app_state
+    print("Import app_state")
     errors = []
     try:
         state.redis_jwt_client = LifespanResources.get_jwt_redis_client()
@@ -259,7 +261,7 @@ async def lifespan(app: FastAPI):
     if errors:
         raise RuntimeError(f"Startup failed: {'; '.join(errors)}")
 
-
+    print("app_state has no problem and theyre ready to go!")
 
 
     try:
@@ -267,29 +269,29 @@ async def lifespan(app: FastAPI):
 
     finally:
         if state.redis_jwt_client:
-            print("Redis client released!")
             await to_thread(state.redis_jwt_client.close)
+            print("Redis client released!")
 
         if state.mongo_db_client:
-            print("MongoDB client released!")
             await state.mongo_db_client.close()
+            print("MongoDB client released!")
 
         if state.milvus_character_vector:
-            print("Milvus character vector released!")
             await to_thread(state.milvus_character_vector.client.close)
+            print("Milvus character vector released!")
 
         if state.milvus_message_vector:
-            print("Milvus message vector released!")
             await to_thread(state.milvus_message_vector.client.close)
+            print("Milvus message vector released!")
 
         if state.httpx_client:
-            print("Httpx client released!")
             await to_thread(state.httpx_client.close)
+            print("Httpx client released!")
 
         if state.httpx_async_client:
-            print("Httpx async client released!")
             await state.httpx_async_client.aclose()
+            print("Httpx async client released!")
 
         if state.azure_client:
-            print("Azure client released!")
             await to_thread(state.azure_client.close)
+            print("Azure client released!")
