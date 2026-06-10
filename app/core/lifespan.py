@@ -15,6 +15,7 @@ from groq import AsyncGroq
 
 from app.core.local_config import settings
 from app.core.state import app_state
+from app.core.logger import app_logger
 
 
 
@@ -42,6 +43,7 @@ class LifespanResources:
 
     @staticmethod
     def get_jwt_redis_client():
+        app_logger.info("Starting redis client!")
         return Redis(
             host='127.0.0.1',
             port=6379,
@@ -53,10 +55,12 @@ class LifespanResources:
 
     @staticmethod
     def get_mongo_db_main_client() -> AsyncMongoClient:
+        app_logger.info("Starting mongo db client!")
         return AsyncMongoClient(settings.mongo_db.get_secret_value())
 
     @staticmethod
     def get_milvus_character_knowledge():
+        app_logger.info("Starting milvus character knowledge!")
         other_params = LifespanResources._vector_config_params()
         return MilvusVectorStore(
             collection_name="character_knowledge_base",
@@ -65,6 +69,7 @@ class LifespanResources:
 
     @staticmethod
     def get_milvus_message_store():
+        app_logger.info("Starting milvus message store!")
         _ttl = int(timedelta(days=7).total_seconds())
         other_params = LifespanResources._vector_config_params()
         return MilvusVectorStore(
@@ -75,6 +80,7 @@ class LifespanResources:
 
     @staticmethod
     def get_httpx_client():
+        app_logger.info("Starting httpx client!")
         _limits = LifespanResources._limits()
         return Client(
             timeout=30.0,
@@ -83,6 +89,7 @@ class LifespanResources:
 
     @staticmethod
     def get_httpx_async_client():
+        app_logger.info("Starting httpx async client!")
         _limits = LifespanResources._limits()
         return AsyncClient(
             timeout=30.0,
@@ -92,6 +99,7 @@ class LifespanResources:
 
     @staticmethod
     def get_cohere_embed_model(httpx_client: Optional[Client]=None, httpx_async_client: Optional[AsyncClient]=None):
+        app_logger.info("Starting cohere embed client!")
         cohere_params = {
             "model_name" :"embed-multilingual-v3.0",
             "api_key" : settings.cohere_api_key.get_secret_value(),
@@ -106,6 +114,7 @@ class LifespanResources:
 
     @staticmethod
     def get_azure_client():
+        app_logger.info("Starting azure client!")
         _secret_credentials = ClientSecretCredential(
             tenant_id=settings.tenant_id.get_secret_value(),
             client_id=settings.client_id.get_secret_value(),
@@ -120,47 +129,53 @@ class LifespanResources:
 
     @staticmethod
     def get_groq_client():
+        app_logger.info("Starting groq client!")
         return AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting lifespan")
+    app_logger.info("Fastapi Async context manager startup!")
     state = app_state
-    print("Import app_state")
     errors = []
     try:
         state.redis_jwt_client = LifespanResources.get_jwt_redis_client()
     except Exception as e:
+        app_logger.error(f"Lifespan Redis Error: {str(e)}")
         errors.append(f"Redis Jwt init failed: {str(e)}")
         state.redis_jwt_client = None
 
     try:
         state.mongo_db_client = LifespanResources.get_mongo_db_main_client()
     except Exception as e:
+        app_logger.error(f"Lifespan MongoDb Error: {str(e)}")
         errors.append(f"MongoDB async client init failed: {str(e)}")
         state.mongo_db_client = None
 
     try:
         state.milvus_character_vector = LifespanResources.get_milvus_character_knowledge()
     except Exception as e:
+        app_logger.error(f"Lifespan Milvus Character Error: {str(e)}")
         errors.append(f"Milvus character vector init failed: {str(e)}")
         state.milvus_character_vector = None
 
     try:
         state.milvus_message_vector = LifespanResources.get_milvus_message_store()
     except Exception as e:
+        app_logger.error(f"Lifespan Milvus Message Error: {str(e)}")
         errors.append(f"Milvus message vector init failed: {str(e)}")
         state.milvus_message_vector = None
 
     try:
         state.httpx_client = LifespanResources.get_httpx_client()
     except Exception as e:
+        app_logger.error(f"Lifespan Httpx Client Error: {str(e)}")
         errors.append(f"Httpx client init failed: {str(e)}")
         state.httpx_client = None
 
     try:
         state.httpx_async_client = LifespanResources.get_httpx_async_client()
     except Exception as e:
+        app_logger.error(f"Lifespan Httpx Async Client Error: {str(e)}")
         errors.append(f"Httpx async client init failed: {str(e)}")
         state.httpx_async_client = None
 
@@ -171,18 +186,21 @@ async def lifespan(app: FastAPI):
             httpx_async_client=state.httpx_async_client
         )
     except Exception as e:
+        app_logger.error(f"Lifespan Cohere Embed Error: {str(e)}")
         errors.append(f"Cohere embed model init failed: {str(e)}")
         state.cohere_embed_model = None
 
     try:
         state.azure_client = LifespanResources.get_azure_client()
     except Exception as e:
+        app_logger.error(f"Lifespan Azure Client Error: {str(e)}")
         errors.append(f"Azure client init failed: {str(e)}")
         state.azure_client = None
 
     try:
         state.groq_client = LifespanResources.get_groq_client()
     except Exception as e:
+        app_logger.error(f"Lifespan Groq Client Error: {str(e)}")
         errors.append(f"Groq client init failed: {str(e)}")
         state.groq_client = None
 
@@ -191,9 +209,9 @@ async def lifespan(app: FastAPI):
 
 
     if errors:
-        raise RuntimeError(f"Startup failed: {'; '.join(errors)}")
-
-    print("app_state has no problem and theyre ready to go!")
+        collective_error = f"Startup failed: {'; '.join(errors)}"
+        app_logger.error(f"Collective Error -> {collective_error}")
+        raise RuntimeError(collective_error)
 
 
     try:
@@ -202,32 +220,32 @@ async def lifespan(app: FastAPI):
     finally:
         if state.redis_jwt_client:
             await to_thread(state.redis_jwt_client.close)
-            print("Redis client released!")
+            app_logger.info("Redis client released!")
 
         if state.mongo_db_client:
             await state.mongo_db_client.close()
-            print("MongoDB client released!")
+            app_logger.info("MongoDB client released!")
 
         if state.milvus_character_vector:
             await to_thread(state.milvus_character_vector.client.close)
-            print("Milvus character vector released!")
+            app_logger.info("Milvus character vector released!")
 
         if state.milvus_message_vector:
             await to_thread(state.milvus_message_vector.client.close)
-            print("Milvus message vector released!")
+            app_logger.info("Milvus message vector released!")
 
         if state.httpx_client:
             await to_thread(state.httpx_client.close)
-            print("Httpx client released!")
+            app_logger.info("Httpx client released!")
 
         if state.httpx_async_client:
             await state.httpx_async_client.aclose()
-            print("Httpx async client released!")
+            app_logger.info("Httpx async client released!")
 
         if state.azure_client:
             await to_thread(state.azure_client.close)
-            print("Azure client released!")
+            app_logger.info("Azure client released!")
 
         if state.groq_client:
             await state.groq_client.close()
-            print("Groq client released!")
+            app_logger.info("Groq client released!")
