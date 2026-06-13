@@ -21,4 +21,5 @@ dependencies = [
     "llama-index-embeddings-cohere>=0.8.0",
     "llama-index-vector-stores-milvus>=1.1.0",
     "llama-index-vector-stores-postgres>=0.8.1",
+    "slowapi>=0.1.9",
 ]
