@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.services.auth.web_auth_service import HttpCookieManagerService
 from app.services.auth.user_auth_services import UserAuthenticationService
 from app.dependencies.auth import get_http_cookie_manager_service, get_user_authentication_service
+from app.core.logger import app_logger
 
 
 
@@ -37,10 +38,11 @@ async def login_endpoint_v1(
         if not http_cookie.setting_http_cookie(sub=user_account):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
+        app_logger.info(f"The User ({user.email}) has successfully logged in")
         return UserRead(external_id=user_account)
     except Exception as e:
-        print(str(e))
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        app_logger.error(f"User login error: {e}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -55,8 +57,8 @@ async def signup_endpoint_v1(
         )
         return UserRead(external_id=user_account)
     except Exception as e:
-        print(str(e))
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        app_logger.error(f"User signup error: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
 
 
 @router.get("/me")
@@ -67,13 +69,16 @@ async def check_user_v1(
     try:
         external_id, jti = http_cookie.getting_id_from_http_cookie_with_jti()
         if not external_id:
+            app_logger.error(f"User check error: User ({external_id})")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+        app_logger.info(f"The User ({external_id}) has successfully logged in")
         return {
             "external_id": external_id,
             "jti_key": jti,
         }
     except Exception as e:
-        print(str(e))
+        app_logger.error(f"User check error: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -82,3 +87,4 @@ async def logout_endpoint_v1(
         http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
 ):
     http_cookie.deleting_id_from_http_cookie()
+    app_logger.info("User logged out")
