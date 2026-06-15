@@ -1,6 +1,7 @@
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from datetime import datetime,timezone
+from zoneinfo import ZoneInfo
 import ulid
 
 
@@ -42,3 +43,25 @@ class UserAuthenticationService:
         except Exception as e:
             raise e
 
+    async def login_user_v1(self, email, password):
+        try:
+            form = await self.mongo_db.users.find_one({"email": email})
+            if not form:
+                return None
+
+            hash_password = form.get("password")
+            is_valid = await self.auth_pass_service.verify_hash_password(
+                password=password, hash_password=hash_password
+            )
+            if not is_valid:
+                return None
+            ph_tz = ZoneInfo("Asia/Manila")
+            login_time = datetime.now(ph_tz)
+
+            return {
+                "email": form["email"],
+                "external_id": form["external_id"],
+                "login_time": login_time
+            }
+        except Exception as e:
+            return None
