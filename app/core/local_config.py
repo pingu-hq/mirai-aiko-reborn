@@ -6,6 +6,8 @@ from functools import lru_cache
 env_file_path = Path(__file__).resolve().parent.parent.parent / "secrets" / ".env"
 
 class Settings(BaseSettings):
+
+    IS_DEVELOPMENT_MODE: bool = None
     HELLO_WORLD: str = ""
     MONGO_DATABASE: SecretStr = "mongodb://localhost:27017"
 
@@ -113,6 +115,13 @@ class Settings(BaseSettings):
         if not self.JWT_SECRET_KEY:
             self.value_error()
         return self.JWT_SECRET_KEY
+
+
+    @property
+    def project_development_mode(self):
+        if not self.IS_DEVELOPMENT_MODE:
+            raise self.value_error()
+        return self.IS_DEVELOPMENT_MODE
 
     model_config = SettingsConfigDict(
         env_file=env_file_path,
