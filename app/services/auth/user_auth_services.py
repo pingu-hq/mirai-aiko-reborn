@@ -1,5 +1,7 @@
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
+from app.models.users import UserFormModel
+from app.core.logger import app_logger
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
 import ulid
@@ -32,15 +34,16 @@ class UserAuthenticationService:
     async def sign_up_user(self, email, password):
         try:
             hashed_pass = await self.auth_pass_service.make_hash_password(password=password)
-            form = {
-                "email": email,
-                "password": hashed_pass,
-                "date_created": datetime.now(timezone.utc).isoformat(),
-                "external_id":ulid.new().str
-            }
-            result = await self.mongo_db.users.insert_one(form)
-            return result.inserted_id
+
+            form = UserFormModel(
+                email=email,
+                password=hashed_pass
+            )
+            await self.mongo_db.users.insert_one(form.get_mongo_dict)
+            app_logger.info(f"eID:{form.external_id} has been successfully registered")
+            return form.external_id
         except Exception as e:
+            app_logger.error(f"Login user {email} failed. Error: {e}")
             raise e
 
     async def login_user_v1(self, email, password):
@@ -64,4 +67,5 @@ class UserAuthenticationService:
                 "login_time": login_time
             }
         except Exception as e:
+            app_logger.error(f"Login user {email} failed. Error: {e}")
             return None
