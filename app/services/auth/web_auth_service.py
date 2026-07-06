@@ -13,7 +13,6 @@ import ulid
 
 
 
-IS_IN_TESTING_PHASE = True
 
 
 class JwtTokenService:
@@ -104,7 +103,7 @@ class JwtAndCookieHandlerService:
 
     @property
     def secure_cookie(self):
-        if IS_IN_TESTING_PHASE:
+        if settings.project_development_mode:
             return False
 
         return True
@@ -137,12 +136,16 @@ class JwtAndCookieHandlerService:
         )
 
     def internal_setup_cookie(self, key, token_value, max_age, same_site):
+        if settings.project_development_mode:
+            secure = False
+        else:
+            secure = True
         self.resp.set_cookie(
             key=key,
             value=token_value,
             httponly=True,
             samesite=same_site,
-            secure=self.secure_cookie,
+            secure=secure,
             max_age=max_age,
             path="/"
         )
