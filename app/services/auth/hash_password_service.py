@@ -25,7 +25,9 @@ class AuthPasswordService:
         except HashingError:
             return None
 
-    async def verify_hash_password(self, hash_password: str, password: str):
+    async def verify_hash_password(self, hash_password: str | None, password: str | None):
+        if password is None or hash_password is None:
+            return None
         try:
             return await to_thread(
                 self._verify_password,
