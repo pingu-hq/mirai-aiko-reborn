@@ -2,7 +2,7 @@ from app.repositories.in_memory_database.redis_repository import JtiCacheReposit
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.services.auth.web_auth_service import JwtTokenService, JwtAndCookieHandlerService, HttpCookieManagerService
-from app.services.auth.user_auth_services import UserAuthenticationService
+from app.services.auth.user_auth_services import UserAuthenticationService, AuthUserLoginService
 from fastapi import Depends, Request, Response
 
 
@@ -50,6 +50,15 @@ def get_user_authentication_service(
         mongo_db: UsersCollectionRepository = Depends(get_user_collection_repository)
 ) -> UserAuthenticationService:
     return UserAuthenticationService(
+        auth_pass_service=auth_pass_service,
+        mongo_db=mongo_db
+    )
+
+def get_auth_user_service(
+        auth_pass_service: AuthPasswordService = Depends(get_auth_password_service),
+        mongo_db: UsersCollectionRepository = Depends(get_user_collection_repository)
+):
+    return AuthUserLoginService(
         auth_pass_service=auth_pass_service,
         mongo_db=mongo_db
     )
