@@ -1,9 +1,8 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from app.services.auth.web_auth_service import HttpCookieManagerService
-from app.services.auth.user_auth_services import UserAuthenticationService
-from app.dependencies.auth import get_http_cookie_manager_service, get_user_login_service
+from app.dependencies.auth import get_http_cookie_manager_service, get_user_login_service, get_user_create_service
 from app.core.logger import app_logger
-from app.services.auth.user_auth_services import AuthUserLoginService
+from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService
 from app.schemas.users import *
 
 router = APIRouter(
@@ -34,13 +33,20 @@ async def login_endpoint_v1(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
 
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+async def signup_endpoint_v1(
+        user: UserCreateRequest,
+        register_service: AuthUserRegisterService = Depends(get_user_create_service)
 ):
     try:
-        user_account = await user_auth_service.sign_up_user(
+        is_created = await register_service.signup_user(
             email=user.email,
             password=user.password
         )
-        return UserRead(external_id=user_account)
+        if is_created:
+            return UserLoginResponse(email=user.email)
+
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
     except Exception as e:
         app_logger.error(f"User signup error: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
