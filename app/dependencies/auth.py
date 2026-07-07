@@ -54,7 +54,7 @@ def get_user_authentication_service(
         mongo_db=mongo_db
     )
 
-def get_auth_user_service(
+def get_user_login_service(
         auth_pass_service: AuthPasswordService = Depends(get_auth_password_service),
         mongo_db: UsersCollectionRepository = Depends(get_user_collection_repository)
 ):

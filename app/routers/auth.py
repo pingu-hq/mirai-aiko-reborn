@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from app.services.auth.web_auth_service import HttpCookieManagerService
 from app.services.auth.user_auth_services import UserAuthenticationService
-from app.dependencies.auth import get_http_cookie_manager_service, get_auth_user_service
+from app.dependencies.auth import get_http_cookie_manager_service, get_user_login_service
 from app.core.logger import app_logger
 from app.services.auth.user_auth_services import AuthUserLoginService
 from app.schemas.users import *
@@ -17,7 +17,7 @@ router = APIRouter(
 async def login_endpoint_v1(
         user: UserLoginRequestRequest,
         http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
-        login_service: AuthUserLoginService = Depends(get_auth_user_service)
+        login_service: AuthUserLoginService = Depends(get_user_login_service)
 ):
     try:
         await login_service.insert_email(email=user.email)
