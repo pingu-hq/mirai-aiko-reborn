@@ -2,6 +2,7 @@ from app.services.auth.hash_password_service import AuthPasswordService
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from app.models.users import UserFormModel
 from app.core.logger import app_logger
+from functools import cached_property
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
 import ulid
@@ -128,3 +129,46 @@ class AuthUserLoginService:
         if not is_valid:
             return False
         return True
+
+class AuthUserRegisterService:
+    _external_id = "external_id"
+    _password = "password"
+    _date_created = "date_created"
+    _email = "email"
+
+    def __init__(
+            self,
+            auth_pass_service: AuthPasswordService,
+            mongo_db: UsersCollectionRepository,
+    ):
+        self.mongo_db = mongo_db
+        self.auth_pass_service = auth_pass_service
+
+
+    @cached_property
+    def ph_timezone(self):
+        return ZoneInfo("Asia/Manila")
+
+    def get_date_created(self):
+        return datetime.now(self.ph_timezone)
+
+    @staticmethod
+    def get_new_uid():
+        return ulid.new().str
+
+    def get_updated_form(self, email, password) -> dict[str, str | datetime]:
+        user_form = {
+            self._email: email,
+            self._password: password,
+            self._date_created: self.get_date_created(),
+            self._external_id: self.get_new_uid()
+        }
+        return user_form
+
+    async def signup_user(self, email: str, password: str):
+        try:
+            user_form = self.get_updated_form(email, password)
+            await self.mongo_db.users.insert_one(user_form)
+            return True
+        except Exception as e:
+            return False
