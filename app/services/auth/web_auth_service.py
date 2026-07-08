@@ -220,80 +220,57 @@ class HttpCookieManagerService:
         return refresh_id
 
 
+    def _get_access_sub_and_jti(self) -> tuple[str | None, str | None]:
+        raw_jwt = self.auth_handler_service.get_raw_jwt_access_token_from_cookie()
+        payload = self.jwt_service.token_decoder(
+            raw_jwt,
+            secret_key=self.secret_key.get_secret_value()
+        )
+        sub = self._get_sub_from_payload(payload, "access")
+        jti_key = self._get_jti_from_payload(payload, "refresh")
 
-    def getting_id_from_http_cookie(self):
-        access_id, access_jti = self._get_access_sub_and_jti()
-        if access_id and access_jti:
-            return access_id
+        jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
 
-        refresh_id, refresh_jti = self._get_refresh_sub_and_jti()
-        if refresh_id and refresh_jti:
+        if not jti_exist:
+            jti_key = None
 
-            self.jwt_service.delete_jti(refresh_jti)
-            http_cookie = self.setting_http_cookie(sub=refresh_id)
-            if not http_cookie:
-                return None
-            return refresh_id
+        return sub, jti_key
+
+    def _get_refresh_sub_and_jti(self) -> tuple[str | None, str | None]:
+        raw_jwt = self.auth_handler_service.get_raw_jwt_refresh_token_from_cookie()
+        payload = self.jwt_service.token_decoder(
+            raw_jwt,
+            secret_key=self.secret_key.get_secret_value()
+        )
+        sub = self._get_sub_from_payload(payload, "refresh")
+        jti_key = self._get_jti_from_payload(payload, "refresh")
+
+        jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
+
+
+        if not jti_exist:
+            jti_key = None
+
+        return sub, jti_key
+
+    @staticmethod
+    def _get_sub_from_payload(payload:dict | None, token_type: Literal["access", "refresh"]):
+        if not isinstance(payload, dict):
+            return None
+
+        if payload.get("type") == token_type:
+            return payload.get("sub")
+
         return None
 
-    def getting_id_from_http_cookie_with_jti(self):
-        access_id, access_jti = self._get_access_sub_and_jti()
-        if access_id and access_jti:
-            return access_id, access_jti
+    @staticmethod
+    def _get_jti_from_payload(payload:dict | None, token_type: Literal["access", "refresh"]):
+        if not isinstance(payload, dict):
+            return None
 
-        refresh_id, refresh_jti = self._get_refresh_sub_and_jti()
-        if refresh_id and refresh_jti:
+        if payload.get("type") == token_type:
+            return payload.get("jti")
 
-            self.jwt_service.delete_jti(refresh_jti)
-            http_cookie = self.setting_http_cookie(sub=refresh_id)
-            if not http_cookie:
-                return "External id not exist or logged out", "Jti expired or not exist"
-
-            return refresh_id, refresh_jti
-        return "Error for external id", "Jti is not processed due to external id"
+        return None
 
 
-
-
-
-    def _get_access_sub_and_jti(self):
-        raw_jwt = self.auth_handler_service.get_raw_jwt_access_token_from_cookie()
-        payload = self.jwt_service.token_decoder(raw_jwt, secret_key=self.secret_key.get_secret_value())
-
-        if not payload:
-            return None, None
-
-        if payload.get("type") != "access":
-            return None, None
-
-        jti_key = payload.get("jti")
-
-        sub = payload.get("sub")
-
-        jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
-
-        if jti_exist:
-            return sub, jti_key
-
-        return sub, None
-
-    def _get_refresh_sub_and_jti(self):
-        raw_jwt = self.auth_handler_service.get_raw_jwt_refresh_token_from_cookie()
-        payload = self.jwt_service.token_decoder(raw_jwt, secret_key=self.secret_key.get_secret_value())
-
-        if not payload:
-            return None, None
-
-        if payload.get("type") != "refresh":
-            return None, None
-
-        jti_key = payload.get("jti")
-
-        sub = payload.get("sub")
-
-        jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
-
-        if jti_exist:
-            return sub, jti_key
-
-        return sub, None
