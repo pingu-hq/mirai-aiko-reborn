@@ -62,3 +62,8 @@ def get_user_create_service(
         auth_pass_service=auth_pass_service,
         mongo_db=mongo_db
     )
+
+def get_user_id_from_cookie(
+        cookie_service: HttpCookieManagerService = Depends(get_http_cookie_manager_service)
+) -> str:
+    return cookie_service.get_existing_user_id_from_cookie()
