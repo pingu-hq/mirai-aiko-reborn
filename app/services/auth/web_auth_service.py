@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Literal
 from jose import jwt
 from jose.exceptions import JWTError, ExpiredSignatureError, JWTClaimsError
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException, status
 from json import (
     dumps as json_dumps,
     loads as json_loads
@@ -204,6 +204,22 @@ class HttpCookieManagerService:
         _, jti = self._get_refresh_sub_and_jti()
         self.jwt_service.delete_jti(jti_key=jti)
 
+    def get_existing_user_id_from_cookie(self) -> str:
+        access_id, access_jti = self._get_access_sub_and_jti()
+        if access_id and access_jti:
+            return access_id
+
+        refresh_id, refresh_jti = self._get_refresh_sub_and_jti()
+        if not refresh_id or not refresh_jti:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+        self.jwt_service.delete_jti(refresh_jti)
+        http_cookie = self.setting_http_cookie(sub=refresh_id)
+        if not http_cookie:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        return refresh_id
+
+
 
     def getting_id_from_http_cookie(self):
         access_id, access_jti = self._get_access_sub_and_jti()
@@ -236,16 +252,8 @@ class HttpCookieManagerService:
             return refresh_id, refresh_jti
         return "Error for external id", "Jti is not processed due to external id"
 
-    def test_get_jti_from_http_cookie(self):
-        _, jti_access = self._get_access_sub_and_jti()
-        _, jti_refresh = self._get_refresh_sub_and_jti()
-        if not jti_access:
-            jti_access = "Jti access is expired or not exist"
 
-        if not jti_refresh:
-            jti_refresh = "Jti refresh is expired or not exist"
 
-        return jti_access, jti_refresh
 
 
     def _get_access_sub_and_jti(self):
