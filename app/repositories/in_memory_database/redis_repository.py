@@ -1,27 +1,39 @@
-from app.core.state import app_state
 from datetime import timedelta
 from redis import Redis
+from app.core.logger import app_logger
 
 
-# def jti_redis_client():
-#     if not hasattr(jti_redis_client, "client"):
-#         jti_redis_client.client = Redis(
-#             host='127.0.0.1',
-#             port=6379,
-#             db=0,
-#             max_connections=15,
-#             socket_timeout=5,
-#             retry_on_timeout=True
-#         )
-#     return jti_redis_client.client
+_redis_client: Redis | None = None
+
+def init_jwt_redis_client():
+    global _redis_client
+    app_logger.info("Starting redis client!")
+    _redis_client = Redis(
+        host='127.0.0.1',
+        port=6379,
+        db=0,
+        max_connections=15,
+        socket_timeout=5,
+        retry_on_timeout=True
+    )
+
+
+def close_jwt_redis_client():
+    app_logger.info("Closing redis client!")
+    global _redis_client
+    if _redis_client:
+        _redis_client.close()
+        _redis_client = None
+
+
 
 class JtiCacheRepository:
 
     @property
     def client(self) -> Redis:
-        if app_state.redis_jwt_client is None:
+        if _redis_client is None:
             raise RuntimeError("Redis not initialized")
-        return app_state.redis_jwt_client
+        return _redis_client
 
 
 

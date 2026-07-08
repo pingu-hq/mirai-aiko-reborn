@@ -8,7 +8,6 @@ from azure.identity import ClientSecretCredential
 from typing import Optional
 from asyncio import to_thread
 from datetime import timedelta
-from redis import Redis
 from httpx import AsyncClient, Client, Limits
 from groq import AsyncGroq
 
@@ -16,6 +15,7 @@ from groq import AsyncGroq
 from app.core.local_config import settings
 from app.core.state import app_state
 from app.core.logger import app_logger
+from app.repositories.in_memory_database.redis_repository import init_jwt_redis_client, close_jwt_redis_client
 
 
 
@@ -39,18 +39,6 @@ class LifespanResources:
         return Limits(
             max_keepalive_connections=10,
             max_connections=20
-        )
-
-    @staticmethod
-    def get_jwt_redis_client():
-        app_logger.info("Starting redis client!")
-        return Redis(
-            host='127.0.0.1',
-            port=6379,
-            db=0,
-            max_connections=15,
-            socket_timeout=5,
-            retry_on_timeout=True
         )
 
     @staticmethod
@@ -138,11 +126,10 @@ async def lifespan(app: FastAPI):
     state = app_state
     errors = []
     try:
-        state.redis_jwt_client = LifespanResources.get_jwt_redis_client()
+        init_jwt_redis_client()
     except Exception as e:
         app_logger.error(f"Lifespan Redis Error: {str(e)}")
         errors.append(f"Redis Jwt init failed: {str(e)}")
-        state.redis_jwt_client = None
 
     try:
         state.mongo_db_client = LifespanResources.get_mongo_db_main_client()
@@ -218,9 +205,8 @@ async def lifespan(app: FastAPI):
         yield
 
     finally:
-        if state.redis_jwt_client:
-            await to_thread(state.redis_jwt_client.close)
-            app_logger.info("Redis client released!")
+        await to_thread(close_jwt_redis_client)
+        app_logger.info("Redis client released!")
 
         if state.mongo_db_client:
             await state.mongo_db_client.close()
