@@ -1,6 +1,11 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from app.services.auth.web_auth_service import HttpCookieManagerService
-from app.dependencies.auth import get_http_cookie_manager_service, get_user_login_service, get_user_create_service
+from app.dependencies.auth import (
+    get_http_cookie_manager_service,
+    get_user_login_service,
+    get_user_create_service,
+    get_user_id_from_cookie
+)
 from app.core.logger import app_logger
 from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService
 from app.schemas.users import *
@@ -53,21 +58,12 @@ async def signup_endpoint_v1(
 
 
 @router.get("/me")
-async def check_user_v1(
-        http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
-
-):
+async def check_user_v1(user_id: str = Depends(get_user_id_from_cookie)):
     try:
-        external_id, jti = http_cookie.getting_id_from_http_cookie_with_jti()
-        if not external_id:
-            app_logger.error(f"User check error: User ({external_id})")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
-        app_logger.info(f"The User ({external_id}) has successfully logged in")
-        return {
-            "external_id": external_id,
-            "jti_key": jti,
-        }
+        app_logger.info(f"The User ({user_id}) exists in the cookie")
+        return {"test_user_id": user_id}
+    except HTTPException:
+        raise
     except Exception as e:
         app_logger.error(f"User check error: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
