@@ -3,12 +3,34 @@ from typing import Optional
 from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
-from app.core.state import app_state
+from app.core.local_config import settings
+from app.core.logger import app_logger
+from app.core.http_client import _httpx_sync_client, _httpx_async_client
 
 
 
 _CHARACTER_INDEX: Optional[VectorStoreIndex] = None
 _MESSAGE_INDEX: Optional[VectorStoreIndex] = None
+
+
+_cohere_embedding_model: CohereEmbedding | None = None
+
+
+def init_cohere_embedding_model():
+    global _cohere_embedding_model
+    if _cohere_embedding_model is None:
+        app_logger.info("Starting cohere embed client!")
+        cohere_params = {
+            "model_name": "embed-multilingual-v3.0",
+            "api_key": settings.cohere_api_key.get_secret_value(),
+        }
+        if _httpx_sync_client:
+            cohere_params["httpx_client"] = _httpx_sync_client
+
+        if _httpx_async_client:
+            cohere_params["httpx_async_client"] = _httpx_async_client
+
+        _cohere_embedding_model = CohereEmbedding(**cohere_params)
 
 
 
@@ -40,7 +62,7 @@ class CharacterKnowledgeRepository(MilvusVectorStoreBaseClass):
 
     @property
     def embed_model(self):
-        return app_state.cohere_embed_model
+        return _cohere_embedding_model
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:
@@ -61,7 +83,7 @@ class MessageStoreRepository(MilvusVectorStoreBaseClass):
 
     @property
     def embed_model(self):
-        return app_state.cohere_embed_model
+        return _cohere_embedding_model
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:

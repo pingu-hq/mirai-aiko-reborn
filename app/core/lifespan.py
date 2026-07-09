@@ -1,13 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from llama_index.vector_stores.milvus import MilvusVectorStore
-from llama_index.embeddings.cohere import CohereEmbedding
 from azure.ai.projects import AIProjectClient
 from azure.identity import ClientSecretCredential
-from typing import Optional
 from asyncio import to_thread
 from datetime import timedelta
-from httpx import AsyncClient, Client, Limits
 from groq import AsyncGroq
 
 
@@ -16,6 +13,13 @@ from app.core.state import app_state
 from app.core.logger import app_logger
 from app.repositories.in_memory_database.redis_repository import init_jwt_redis_client, close_jwt_redis_client
 from app.repositories.no_sql_database.mongo_db_repository import init_mongo_db_client, close_mongo_db_client
+from app.core.http_client import (
+    init_httpx_sync_client,
+    init_httpx_async_client,
+    close_httpx_sync_client,
+    close_httpx_async_client
+)
+from app.repositories.no_sql_database.milvus_vector_repository import init_cohere_embedding_model
 
 
 
@@ -33,13 +37,6 @@ class LifespanResources:
             "similarity_metric" :  "COSINE",
             "consistency_level" : "Session",
         }
-
-    @staticmethod
-    def _limits():
-        return Limits(
-            max_keepalive_connections=10,
-            max_connections=20
-        )
 
 
     @staticmethod
@@ -62,39 +59,6 @@ class LifespanResources:
             **other_params
         )
 
-    @staticmethod
-    def get_httpx_client():
-        app_logger.info("Starting httpx client!")
-        _limits = LifespanResources._limits()
-        return Client(
-            timeout=30.0,
-            limits=_limits
-        )
-
-    @staticmethod
-    def get_httpx_async_client():
-        app_logger.info("Starting httpx async client!")
-        _limits = LifespanResources._limits()
-        return AsyncClient(
-            timeout=30.0,
-            limits=_limits
-        )
-
-
-    @staticmethod
-    def get_cohere_embed_model(httpx_client: Optional[Client]=None, httpx_async_client: Optional[AsyncClient]=None):
-        app_logger.info("Starting cohere embed client!")
-        cohere_params = {
-            "model_name" :"embed-multilingual-v3.0",
-            "api_key" : settings.cohere_api_key.get_secret_value(),
-        }
-        if httpx_client:
-            cohere_params["httpx_client"] = httpx_client
-
-        if httpx_async_client:
-            cohere_params["httpx_async_client"] = httpx_async_client
-
-        return CohereEmbedding(**cohere_params)
 
     @staticmethod
     def get_azure_client():
@@ -148,29 +112,23 @@ async def lifespan(app: FastAPI):
         state.milvus_message_vector = None
 
     try:
-        state.httpx_client = LifespanResources.get_httpx_client()
+        init_httpx_sync_client()
     except Exception as e:
         app_logger.error(f"Lifespan Httpx Client Error: {str(e)}")
         errors.append(f"Httpx client init failed: {str(e)}")
-        state.httpx_client = None
 
     try:
-        state.httpx_async_client = LifespanResources.get_httpx_async_client()
+        init_httpx_async_client()
     except Exception as e:
         app_logger.error(f"Lifespan Httpx Async Client Error: {str(e)}")
         errors.append(f"Httpx async client init failed: {str(e)}")
-        state.httpx_async_client = None
 
 
     try:
-        state.cohere_embed_model = LifespanResources.get_cohere_embed_model(
-            httpx_client=state.httpx_client,
-            httpx_async_client=state.httpx_async_client
-        )
+        init_cohere_embedding_model()
     except Exception as e:
         app_logger.error(f"Lifespan Cohere Embed Error: {str(e)}")
         errors.append(f"Cohere embed model init failed: {str(e)}")
-        state.cohere_embed_model = None
 
     try:
         state.azure_client = LifespanResources.get_azure_client()
@@ -206,6 +164,12 @@ async def lifespan(app: FastAPI):
         await close_mongo_db_client()
         app_logger.info("MongoDB client released!")
 
+        await to_thread(close_httpx_sync_client)
+        app_logger.info("Httpx client released!")
+
+        await close_httpx_async_client()
+        app_logger.info("Httpx async client released!")
+
         if state.milvus_character_vector:
             await to_thread(state.milvus_character_vector.client.close)
             app_logger.info("Milvus character vector released!")
@@ -213,14 +177,6 @@ async def lifespan(app: FastAPI):
         if state.milvus_message_vector:
             await to_thread(state.milvus_message_vector.client.close)
             app_logger.info("Milvus message vector released!")
-
-        if state.httpx_client:
-            await to_thread(state.httpx_client.close)
-            app_logger.info("Httpx client released!")
-
-        if state.httpx_async_client:
-            await state.httpx_async_client.aclose()
-            app_logger.info("Httpx async client released!")
 
         if state.azure_client:
             await to_thread(state.azure_client.close)
