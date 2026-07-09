@@ -1,10 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from llama_index.vector_stores.milvus import MilvusVectorStore
 from azure.ai.projects import AIProjectClient
 from azure.identity import ClientSecretCredential
 from asyncio import to_thread
-from datetime import timedelta
 from groq import AsyncGroq
 
 
@@ -19,45 +17,17 @@ from app.core.http_client import (
     close_httpx_sync_client,
     close_httpx_async_client
 )
-from app.repositories.no_sql_database.milvus_vector_repository import init_cohere_embedding_model
+from app.repositories.no_sql_database.milvus_vector_repository import (
+    init_cohere_embedding_model,
+    init_milvus_message_store,
+    init_milvus_character_knowledge,
+    close_milvus_message_store,
+    close_milvus_character_knowledge
+)
 
 
 
 class LifespanResources:
-
-    @staticmethod
-    def _vector_config_params():
-        return {
-            "uri" : settings.milvus_uri.get_secret_value(),
-            "token" : settings.milvus_token.get_secret_value(),
-            "overwrite" : False,
-            "dim" : 1024,
-            "embedding_field" : "embeddings",
-            "search_config" : {"nprobe": 60},
-            "similarity_metric" :  "COSINE",
-            "consistency_level" : "Session",
-        }
-
-
-    @staticmethod
-    def get_milvus_character_knowledge():
-        app_logger.info("Starting milvus character knowledge!")
-        other_params = LifespanResources._vector_config_params()
-        return MilvusVectorStore(
-            collection_name="character_knowledge_base",
-            **other_params
-        )
-
-    @staticmethod
-    def get_milvus_message_store():
-        app_logger.info("Starting milvus message store!")
-        _ttl = int(timedelta(days=7).total_seconds())
-        other_params = LifespanResources._vector_config_params()
-        return MilvusVectorStore(
-            collection_name="temporary_message_collection",
-            collection_properties={"collection.ttl.seconds": _ttl},
-            **other_params
-        )
 
 
     @staticmethod
@@ -98,18 +68,16 @@ async def lifespan(app: FastAPI):
         errors.append(f"MongoDB async client init failed: {str(e)}")
 
     try:
-        state.milvus_character_vector = LifespanResources.get_milvus_character_knowledge()
+        init_milvus_character_knowledge()
     except Exception as e:
         app_logger.error(f"Lifespan Milvus Character Error: {str(e)}")
         errors.append(f"Milvus character vector init failed: {str(e)}")
-        state.milvus_character_vector = None
 
     try:
-        state.milvus_message_vector = LifespanResources.get_milvus_message_store()
+        init_milvus_message_store()
     except Exception as e:
         app_logger.error(f"Lifespan Milvus Message Error: {str(e)}")
         errors.append(f"Milvus message vector init failed: {str(e)}")
-        state.milvus_message_vector = None
 
     try:
         init_httpx_sync_client()
@@ -170,13 +138,11 @@ async def lifespan(app: FastAPI):
         await close_httpx_async_client()
         app_logger.info("Httpx async client released!")
 
-        if state.milvus_character_vector:
-            await to_thread(state.milvus_character_vector.client.close)
-            app_logger.info("Milvus character vector released!")
+        await to_thread(close_milvus_character_knowledge)
+        app_logger.info("Milvus character vector released!")
 
-        if state.milvus_message_vector:
-            await to_thread(state.milvus_message_vector.client.close)
-            app_logger.info("Milvus message vector released!")
+        await to_thread(close_milvus_message_store)
+        app_logger.info("Milvus message vector released!")
 
         if state.azure_client:
             await to_thread(state.azure_client.close)

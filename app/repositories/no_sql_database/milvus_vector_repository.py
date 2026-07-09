@@ -1,19 +1,21 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
+from datetime import timedelta
 from app.core.local_config import settings
 from app.core.logger import app_logger
 from app.core.http_client import _httpx_sync_client, _httpx_async_client
 
 
 
-_CHARACTER_INDEX: Optional[VectorStoreIndex] = None
-_MESSAGE_INDEX: Optional[VectorStoreIndex] = None
-
-
 _cohere_embedding_model: CohereEmbedding | None = None
+
+_character_vector_store: MilvusVectorStore | None = None
+_message_vector_store: MilvusVectorStore | None = None
+
+_character_index: VectorStoreIndex | None = None
+_message_index: VectorStoreIndex | None = None
 
 
 def init_cohere_embedding_model():
@@ -31,6 +33,51 @@ def init_cohere_embedding_model():
             cohere_params["httpx_async_client"] = _httpx_async_client
 
         _cohere_embedding_model = CohereEmbedding(**cohere_params)
+
+def _vector_config_params():
+    return {
+        "uri" : settings.milvus_uri.get_secret_value(),
+        "token" : settings.milvus_token.get_secret_value(),
+        "overwrite" : False,
+        "dim" : 1024,
+        "embedding_field" : "embeddings",
+        "search_config" : {"nprobe": 60},
+        "similarity_metric" :  "COSINE",
+        "consistency_level" : "Session",
+    }
+
+def init_milvus_character_knowledge():
+    global _character_vector_store
+    if _character_vector_store is None:
+        app_logger.info("Starting milvus character knowledge!")
+        other_params = _vector_config_params()
+        _character_vector_store = MilvusVectorStore(
+            collection_name="character_knowledge_base",
+            **other_params
+        )
+
+def init_milvus_message_store():
+    global _message_vector_store
+    if _message_vector_store is None:
+        app_logger.info("Starting milvus message store!")
+        _ttl = int(timedelta(days=7).total_seconds())
+        other_params = _vector_config_params()
+        _message_vector_store = MilvusVectorStore(
+            collection_name="temporary_message_collection",
+            collection_properties={"collection.ttl.seconds": _ttl},
+            **other_params
+        )
+
+def close_milvus_character_knowledge():
+    global _character_vector_store
+    if _character_vector_store:
+        _character_vector_store.client.close()
+
+
+def close_milvus_message_store():
+    global _message_vector_store
+    if _message_vector_store:
+        _message_vector_store.client.close()
 
 
 
@@ -66,18 +113,20 @@ class CharacterKnowledgeRepository(MilvusVectorStoreBaseClass):
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:
-        return app_state.milvus_character_vector
+        if _character_vector_store is None:
+            raise RuntimeError("Milvus vector store for character knowledge not initialized.")
+        return _character_vector_store
+
 
     @property
     def character_index(self):
-        global _CHARACTER_INDEX
-        if _CHARACTER_INDEX is None:
-
-            _CHARACTER_INDEX = self.create_index(
+        global _character_index
+        if _character_index is None:
+            _character_index = self.create_index(
                 vector_store=self.milvus_vector_store,
                 embed_model=self.embed_model,
             )
-        return _CHARACTER_INDEX
+        return _character_index
 
 class MessageStoreRepository(MilvusVectorStoreBaseClass):
 
@@ -87,15 +136,17 @@ class MessageStoreRepository(MilvusVectorStoreBaseClass):
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:
-        return app_state.milvus_message_vector
+        if _message_vector_store is None:
+            raise RuntimeError("Milvus vector store for message store not initialized.")
+        return _message_vector_store
 
     @property
     def message_index(self):
-        global _MESSAGE_INDEX
-        if _MESSAGE_INDEX is None:
-            _MESSAGE_INDEX = self.create_index(
+        global _message_index
+        if _message_index is None:
+            _message_index = self.create_index(
                 vector_store=self.milvus_vector_store,
                 embed_model=self.embed_model,
             )
-        return _MESSAGE_INDEX
+        return _message_index
 
