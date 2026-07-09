@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from pymongo import AsyncMongoClient
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
 from azure.ai.projects import AIProjectClient
@@ -16,6 +15,7 @@ from app.core.local_config import settings
 from app.core.state import app_state
 from app.core.logger import app_logger
 from app.repositories.in_memory_database.redis_repository import init_jwt_redis_client, close_jwt_redis_client
+from app.repositories.no_sql_database.mongo_db_repository import init_mongo_db_client, close_mongo_db_client
 
 
 
@@ -41,10 +41,6 @@ class LifespanResources:
             max_connections=20
         )
 
-    @staticmethod
-    def get_mongo_db_main_client() -> AsyncMongoClient:
-        app_logger.info("Starting mongo db client!")
-        return AsyncMongoClient(settings.mongo_db.get_secret_value())
 
     @staticmethod
     def get_milvus_character_knowledge():
@@ -132,11 +128,10 @@ async def lifespan(app: FastAPI):
         errors.append(f"Redis Jwt init failed: {str(e)}")
 
     try:
-        state.mongo_db_client = LifespanResources.get_mongo_db_main_client()
+        init_mongo_db_client()
     except Exception as e:
         app_logger.error(f"Lifespan MongoDb Error: {str(e)}")
         errors.append(f"MongoDB async client init failed: {str(e)}")
-        state.mongo_db_client = None
 
     try:
         state.milvus_character_vector = LifespanResources.get_milvus_character_knowledge()
@@ -208,9 +203,8 @@ async def lifespan(app: FastAPI):
         await to_thread(close_jwt_redis_client)
         app_logger.info("Redis client released!")
 
-        if state.mongo_db_client:
-            await state.mongo_db_client.close()
-            app_logger.info("MongoDB client released!")
+        await close_mongo_db_client()
+        app_logger.info("MongoDB client released!")
 
         if state.milvus_character_vector:
             await to_thread(state.milvus_character_vector.client.close)

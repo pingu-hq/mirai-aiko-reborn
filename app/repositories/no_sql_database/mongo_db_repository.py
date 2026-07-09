@@ -1,16 +1,24 @@
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase, AsyncCollection
-from app.core.state import app_state
+from app.core.local_config import settings
+from app.core.logger import app_logger
 
 
+_mongo_db_client: AsyncMongoClient | None = None
 
-# def get_db() -> AsyncDatabase:
-#     if not hasattr(get_db, "database"):
-#         _database_name = "database-name-test"
-#         _mongo_client = AsyncMongoClient(settings.mongo_db.get_secret_value())
-#         get_db.database = _mongo_client[_database_name]
-#
-#     return get_db.database
+def init_mongo_db_client():
+    global _mongo_db_client
+    app_logger.info("Starting mongo db client")
+    _mongo_db_client = AsyncMongoClient(
+        settings.mongo_db.get_secret_value()
+    )
+
+async def close_mongo_db_client():
+    global _mongo_db_client
+    app_logger.info("Closing mongo db client")
+    if _mongo_db_client:
+        await _mongo_db_client.close()
+        _mongo_db_client = None
 
 
 class AsyncMongoDatabase:
@@ -18,9 +26,9 @@ class AsyncMongoDatabase:
 
     @property
     def client(self) -> AsyncMongoClient:
-        if not app_state.mongo_db_client:
+        if _mongo_db_client is None:
             raise RuntimeError("MongoDB client not initialized")
-        return app_state.mongo_db_client
+        return _mongo_db_client
 
 
     @property
