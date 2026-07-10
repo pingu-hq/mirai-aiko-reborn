@@ -1,5 +1,5 @@
 from httpx import AsyncClient, Client, Limits
-from app.core.logger import app_logger
+
 
 
 _httpx_sync_client: Client | None = None
@@ -11,7 +11,6 @@ _limits = Limits(
 
 
 def init_httpx_sync_client():
-    app_logger.info("Starting httpx client!")
     global _httpx_sync_client
     if _httpx_sync_client is None:
         _httpx_sync_client = Client(
@@ -20,7 +19,6 @@ def init_httpx_sync_client():
         )
 
 def init_httpx_async_client():
-    app_logger.info("Starting httpx async client!")
     global _httpx_async_client
     if _httpx_async_client is None:
         _httpx_async_client = AsyncClient(
@@ -32,9 +30,11 @@ def close_httpx_sync_client():
     global _httpx_sync_client
     if _httpx_sync_client:
         _httpx_sync_client.close()
+        _httpx_sync_client = None
 
 
 async def close_httpx_async_client():
     global _httpx_async_client
     if _httpx_async_client:
         await _httpx_async_client.aclose()
+        _httpx_async_client = None

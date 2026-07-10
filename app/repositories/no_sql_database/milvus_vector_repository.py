@@ -4,8 +4,8 @@ from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.embeddings.cohere import CohereEmbedding
 from datetime import timedelta
 from app.core.local_config import settings
-from app.core.logger import app_logger
 from app.core.http_client import _httpx_sync_client, _httpx_async_client
+from app.core.exceptions import check_property_runtime
 
 
 
@@ -21,7 +21,6 @@ _message_index: VectorStoreIndex | None = None
 def init_cohere_embedding_model():
     global _cohere_embedding_model
     if _cohere_embedding_model is None:
-        app_logger.info("Starting cohere embed client!")
         cohere_params = {
             "model_name": "embed-multilingual-v3.0",
             "api_key": settings.cohere_api_key.get_secret_value(),
@@ -49,7 +48,6 @@ def _vector_config_params():
 def init_milvus_character_knowledge():
     global _character_vector_store
     if _character_vector_store is None:
-        app_logger.info("Starting milvus character knowledge!")
         other_params = _vector_config_params()
         _character_vector_store = MilvusVectorStore(
             collection_name="character_knowledge_base",
@@ -59,7 +57,6 @@ def init_milvus_character_knowledge():
 def init_milvus_message_store():
     global _message_vector_store
     if _message_vector_store is None:
-        app_logger.info("Starting milvus message store!")
         _ttl = int(timedelta(days=7).total_seconds())
         other_params = _vector_config_params()
         _message_vector_store = MilvusVectorStore(
@@ -72,12 +69,14 @@ def close_milvus_character_knowledge():
     global _character_vector_store
     if _character_vector_store:
         _character_vector_store.client.close()
+        _character_vector_store = None
 
 
 def close_milvus_message_store():
     global _message_vector_store
     if _message_vector_store:
         _message_vector_store.client.close()
+        _message_vector_store = None
 
 
 
@@ -113,9 +112,7 @@ class CharacterKnowledgeRepository(MilvusVectorStoreBaseClass):
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:
-        if _character_vector_store is None:
-            raise RuntimeError("Milvus vector store for character knowledge not initialized.")
-        return _character_vector_store
+        return check_property_runtime("Milvus Character vector", _character_vector_store)
 
 
     @property
@@ -136,9 +133,7 @@ class MessageStoreRepository(MilvusVectorStoreBaseClass):
 
     @property
     def milvus_vector_store(self) -> MilvusVectorStore:
-        if _message_vector_store is None:
-            raise RuntimeError("Milvus vector store for message store not initialized.")
-        return _message_vector_store
+        return check_property_runtime("Milvus Message vector", _message_vector_store)
 
     @property
     def message_index(self):

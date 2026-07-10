@@ -7,7 +7,7 @@ from openai import OpenAI
 from azure.ai.projects import AIProjectClient
 from azure.identity import ClientSecretCredential
 from app.services.data.message_vector_services import MessageVectorService
-from app.core.logger import app_logger
+from app.core.exceptions import check_property_runtime
 from app.core.local_config import settings
 
 
@@ -20,7 +20,6 @@ _azure_ai_project: AIProjectClient | None = None
 def init_groq_client():
     global _groq_client
     if _groq_client is None:
-        app_logger.info("Starting groq client!")
         _groq_client = AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
 
 def init_azure_ai_project():
@@ -71,15 +70,11 @@ class AgentService:
 
     @property
     def azure_client(self) -> OpenAI:
-        if _azure_client is None:
-            raise RuntimeError("Azure client not initialized")
-        return _azure_client
+        return check_property_runtime("Azure client", _azure_client)
 
     @property
     def groq_client(self) -> AsyncGroq:
-        if _groq_client is None:
-            raise RuntimeError("Groq client not initialized")
-        return _groq_client
+        return check_property_runtime("Groq client", _groq_client)
 
     @property
     def current_datetime(self) -> datetime:

@@ -1,13 +1,12 @@
 from datetime import timedelta
 from redis import Redis
-from app.core.logger import app_logger
+from app.core.exceptions import check_property_runtime
 
 
 _redis_client: Redis | None = None
 
 def init_jwt_redis_client():
     global _redis_client
-    app_logger.info("Starting redis client!")
     _redis_client = Redis(
         host='127.0.0.1',
         port=6379,
@@ -19,7 +18,6 @@ def init_jwt_redis_client():
 
 
 def close_jwt_redis_client():
-    app_logger.info("Closing redis client!")
     global _redis_client
     if _redis_client:
         _redis_client.close()
@@ -31,9 +29,7 @@ class JtiCacheRepository:
 
     @property
     def client(self) -> Redis:
-        if _redis_client is None:
-            raise RuntimeError("Redis not initialized")
-        return _redis_client
+        return check_property_runtime("Redis jwt client", _redis_client)
 
 
 

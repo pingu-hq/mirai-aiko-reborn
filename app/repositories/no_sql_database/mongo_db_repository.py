@@ -1,21 +1,19 @@
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase, AsyncCollection
 from app.core.local_config import settings
-from app.core.logger import app_logger
+from app.core.exceptions import check_property_runtime
 
 
 _mongo_db_client: AsyncMongoClient | None = None
 
 def init_mongo_db_client():
     global _mongo_db_client
-    app_logger.info("Starting mongo db client")
     _mongo_db_client = AsyncMongoClient(
         settings.mongo_db.get_secret_value()
     )
 
 async def close_mongo_db_client():
     global _mongo_db_client
-    app_logger.info("Closing mongo db client")
     if _mongo_db_client:
         await _mongo_db_client.close()
         _mongo_db_client = None
@@ -26,9 +24,7 @@ class AsyncMongoDatabase:
 
     @property
     def client(self) -> AsyncMongoClient:
-        if _mongo_db_client is None:
-            raise RuntimeError("MongoDB client not initialized")
-        return _mongo_db_client
+        return check_property_runtime("MongoDb Client", _mongo_db_client)
 
 
     @property
