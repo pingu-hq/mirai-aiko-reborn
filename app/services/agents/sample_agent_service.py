@@ -66,7 +66,7 @@ def close_azure_ai_project():
 class AgentService:
     def __init__(self, message_vector_service: MessageVectorService):
         self.message_service = message_vector_service
-        self.model_name = "qwen/qwen3-32b"
+        self.model_name = "openai/gpt-oss-120b"
 
 
     @property
@@ -94,7 +94,7 @@ class AgentService:
             temperature=0.6,
             max_completion_tokens=22_222,
             top_p=0.95,
-            reasoning_effort="default",
+            reasoning_effort="medium",
             stream=False,
             stop=None,
             reasoning_format="hidden"
