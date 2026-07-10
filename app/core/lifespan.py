@@ -35,102 +35,52 @@ close_groq_client
 )
 
 
+async def safe_closure(name: str, close_func, is_sync: bool = True):
+    try:
+        if is_sync:
+            await to_thread(close_func)
+        else:
+            await close_func()
+        app_logger.info(f"{name} is released successfully")
+    except Exception as e:
+        app_logger.error(f"Failed to release {name}: Error details: {str(e)}")
+
+def safe_init(name: str, init_func, strict: bool = True):
+    try:
+        init_func()
+        app_logger.info(f"{name} is initialized successfully")
+    except Exception as e:
+        app_logger.error(f"Failed to run {name}: {str(e)}")
+        if strict:
+            raise RuntimeError(f"Critical startup failure in {init_func.__name__}") from e
+        else:
+            app_logger.warning(f">>{name}<< failed to initialize but operation will continue. Beware of side effects.")
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app_logger.info("Fastapi Async context manager startup!")
-    errors = []
     try:
-        init_jwt_redis_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan Redis Error: {str(e)}")
-        errors.append(f"Redis Jwt init failed: {str(e)}")
-
-    try:
-        init_mongo_db_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan MongoDb Error: {str(e)}")
-        errors.append(f"MongoDB async client init failed: {str(e)}")
-
-    try:
-        init_milvus_character_knowledge()
-    except Exception as e:
-        app_logger.error(f"Lifespan Milvus Character Error: {str(e)}")
-        errors.append(f"Milvus character vector init failed: {str(e)}")
-
-    try:
-        init_milvus_message_store()
-    except Exception as e:
-        app_logger.error(f"Lifespan Milvus Message Error: {str(e)}")
-        errors.append(f"Milvus message vector init failed: {str(e)}")
-
-    try:
-        init_httpx_sync_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan Httpx Client Error: {str(e)}")
-        errors.append(f"Httpx client init failed: {str(e)}")
-
-    try:
-        init_httpx_async_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan Httpx Async Client Error: {str(e)}")
-        errors.append(f"Httpx async client init failed: {str(e)}")
-
-
-    try:
-        init_cohere_embedding_model()
-    except Exception as e:
-        app_logger.error(f"Lifespan Cohere Embed Error: {str(e)}")
-        errors.append(f"Cohere embed model init failed: {str(e)}")
-
-    try:
-        init_azure_ai_project()
-        init_azure_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan Azure Client Error: {str(e)}")
-        errors.append(f"Azure client init failed: {str(e)}")
-
-    try:
-        init_groq_client()
-    except Exception as e:
-        app_logger.error(f"Lifespan Groq Client Error: {str(e)}")
-        errors.append(f"Groq client init failed: {str(e)}")
-
-
-
-
-
-    if errors:
-        collective_error = f"Startup failed: {'; '.join(errors)}"
-        app_logger.error(f"Collective Error -> {collective_error}")
-        raise RuntimeError(collective_error)
-
-
-    try:
+        safe_init("Redis Jwt Client", init_jwt_redis_client)
+        safe_init("MongoDb Client", init_mongo_db_client)
+        safe_init("Milvus client character knowledge", init_milvus_character_knowledge)
+        safe_init("Milvus client message store", init_milvus_message_store)
+        safe_init("Httpx sync client", init_httpx_sync_client)
+        safe_init("Httpx async client", init_httpx_async_client)
+        safe_init("Cohere embedding model", init_cohere_embedding_model)
+        safe_init("Azure AI Project", init_azure_ai_project)
+        safe_init("Azure Client", init_azure_client)
+        safe_init("Groq Client", init_groq_client)
         yield
 
     finally:
-        await to_thread(close_jwt_redis_client)
-        app_logger.info("Redis client released!")
-
-        await close_mongo_db_client()
-        app_logger.info("MongoDB client released!")
-
-        await to_thread(close_httpx_sync_client)
-        app_logger.info("Httpx client released!")
-
-        await close_httpx_async_client()
-        app_logger.info("Httpx async client released!")
-
-        await to_thread(close_milvus_character_knowledge)
-        app_logger.info("Milvus character vector released!")
-
-        await to_thread(close_milvus_message_store)
-        app_logger.info("Milvus message vector released!")
-
-        await to_thread(close_azure_openai_client)
-        await to_thread(close_azure_ai_project)
-        app_logger.info("Azure client released!")
-
-        await close_groq_client()
-        app_logger.info("Groq client released!")
+        await safe_closure("Redis Jwt Client", close_jwt_redis_client)
+        await safe_closure("MongoDb Client", close_mongo_db_client, is_sync=False)
+        await safe_closure("Milvus client character knowledge", close_milvus_character_knowledge)
+        await safe_closure("Milvus client message store", close_milvus_message_store)
+        await safe_closure("Httpx sync client", close_httpx_sync_client)
+        await safe_closure("Httpx async client", close_httpx_async_client, is_sync=False)
+        await safe_closure("Azure AI Project", close_azure_ai_project)
+        await safe_closure("Azure Client", close_azure_openai_client)
+        await safe_closure("Groq Client", close_groq_client, is_sync=False)
