@@ -1,12 +1,65 @@
 from json import dumps
-
-from app.core.state import app_state
-from app.services.data.message_vector_services import MessageVectorService
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from asyncio import to_thread
 from groq import AsyncGroq
 from openai import OpenAI
+from azure.ai.projects import AIProjectClient
+from azure.identity import ClientSecretCredential
+from app.services.data.message_vector_services import MessageVectorService
+from app.core.logger import app_logger
+from app.core.local_config import settings
+
+
+
+
+_groq_client: AsyncGroq | None = None
+_azure_client: OpenAI | None = None
+_azure_ai_project: AIProjectClient | None = None
+
+def init_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        app_logger.info("Starting groq client!")
+        _groq_client = AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
+
+def init_azure_ai_project():
+    global _azure_ai_project
+    if _azure_ai_project is None:
+        client_secret_credential = ClientSecretCredential(
+            tenant_id=settings.tenant_id.get_secret_value(),
+            client_id=settings.client_id.get_secret_value(),
+            client_secret=settings.client_secret.get_secret_value(),
+        )
+        _azure_ai_project = AIProjectClient(
+            credential=client_secret_credential,
+            endpoint=settings.ai_project_endpoint.get_secret_value()
+        )
+
+def init_azure_client():
+    if _azure_ai_project:
+        global _azure_client
+        if _azure_client is None:
+            _azure_client = _azure_ai_project.get_openai_client()
+
+
+async def close_groq_client():
+    global _groq_client
+    if _groq_client:
+        await _groq_client.close()
+        _groq_client = None
+
+def close_azure_openai_client():
+    global _azure_client
+    if _azure_client:
+        _azure_client.close()
+        _azure_client = None
+
+def close_azure_ai_project():
+    global _azure_ai_project
+    if _azure_ai_project:
+        _azure_ai_project.close()
+        _azure_ai_project = None
 
 
 
@@ -18,11 +71,15 @@ class AgentService:
 
     @property
     def azure_client(self) -> OpenAI:
-        return app_state.azure_client
+        if _azure_client is None:
+            raise RuntimeError("Azure client not initialized")
+        return _azure_client
 
     @property
     def groq_client(self) -> AsyncGroq:
-        return app_state.groq_client
+        if _groq_client is None:
+            raise RuntimeError("Groq client not initialized")
+        return _groq_client
 
     @property
     def current_datetime(self) -> datetime:

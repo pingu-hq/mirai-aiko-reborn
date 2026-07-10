@@ -1,59 +1,44 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from azure.ai.projects import AIProjectClient
-from azure.identity import ClientSecretCredential
 from asyncio import to_thread
-from groq import AsyncGroq
 
 
-from app.core.local_config import settings
-from app.core.state import app_state
 from app.core.logger import app_logger
-from app.repositories.in_memory_database.redis_repository import init_jwt_redis_client, close_jwt_redis_client
-from app.repositories.no_sql_database.mongo_db_repository import init_mongo_db_client, close_mongo_db_client
+from app.repositories.in_memory_database.redis_repository import (
+init_jwt_redis_client,
+close_jwt_redis_client
+)
+from app.repositories.no_sql_database.mongo_db_repository import (
+init_mongo_db_client,
+close_mongo_db_client
+)
 from app.core.http_client import (
-    init_httpx_sync_client,
-    init_httpx_async_client,
-    close_httpx_sync_client,
-    close_httpx_async_client
+init_httpx_sync_client,
+init_httpx_async_client,
+close_httpx_sync_client,
+close_httpx_async_client
 )
 from app.repositories.no_sql_database.milvus_vector_repository import (
-    init_cohere_embedding_model,
-    init_milvus_message_store,
-    init_milvus_character_knowledge,
-    close_milvus_message_store,
-    close_milvus_character_knowledge
+init_cohere_embedding_model,
+init_milvus_message_store,
+init_milvus_character_knowledge,
+close_milvus_message_store,
+close_milvus_character_knowledge
+)
+from app.services.agents.sample_agent_service import (
+init_azure_ai_project,
+init_groq_client,
+init_azure_client,
+close_azure_openai_client,
+close_azure_ai_project,
+close_groq_client
 )
 
 
-
-class LifespanResources:
-
-
-    @staticmethod
-    def get_azure_client():
-        app_logger.info("Starting azure client!")
-        _secret_credentials = ClientSecretCredential(
-            tenant_id=settings.tenant_id.get_secret_value(),
-            client_id=settings.client_id.get_secret_value(),
-            client_secret=settings.client_secret.get_secret_value(),
-        )
-        _azure_client = AIProjectClient(
-            credential=_secret_credentials,
-            endpoint=settings.ai_project_endpoint.get_secret_value()
-        )
-        return _azure_client.get_openai_client()
-
-
-    @staticmethod
-    def get_groq_client():
-        app_logger.info("Starting groq client!")
-        return AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app_logger.info("Fastapi Async context manager startup!")
-    state = app_state
     errors = []
     try:
         init_jwt_redis_client()
@@ -99,18 +84,17 @@ async def lifespan(app: FastAPI):
         errors.append(f"Cohere embed model init failed: {str(e)}")
 
     try:
-        state.azure_client = LifespanResources.get_azure_client()
+        init_azure_ai_project()
+        init_azure_client()
     except Exception as e:
         app_logger.error(f"Lifespan Azure Client Error: {str(e)}")
         errors.append(f"Azure client init failed: {str(e)}")
-        state.azure_client = None
 
     try:
-        state.groq_client = LifespanResources.get_groq_client()
+        init_groq_client()
     except Exception as e:
         app_logger.error(f"Lifespan Groq Client Error: {str(e)}")
         errors.append(f"Groq client init failed: {str(e)}")
-        state.groq_client = None
 
 
 
@@ -144,10 +128,9 @@ async def lifespan(app: FastAPI):
         await to_thread(close_milvus_message_store)
         app_logger.info("Milvus message vector released!")
 
-        if state.azure_client:
-            await to_thread(state.azure_client.close)
-            app_logger.info("Azure client released!")
+        await to_thread(close_azure_openai_client)
+        await to_thread(close_azure_ai_project)
+        app_logger.info("Azure client released!")
 
-        if state.groq_client:
-            await state.groq_client.close()
-            app_logger.info("Groq client released!")
+        await close_groq_client()
+        app_logger.info("Groq client released!")
