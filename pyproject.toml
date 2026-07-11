@@ -22,4 +22,5 @@ dependencies = [
     "llama-index-vector-stores-milvus>=1.1.0",
     "llama-index-vector-stores-postgres>=0.8.1",
     "slowapi>=0.1.9",
+    "crewai>=1.6.1",
 ]

@@ -66,18 +66,5 @@ Thumbs.db
 
 app_demo/
 
-# For the output file of crewai after finishing task
-task_report1.md
-task_report2.md
-# Adding gitignore rules for crewai configuration files
-multi_agent_workflow/config/*.yaml
 tasks.yaml
-agent.yaml
-
-sample_code.py
-sample_vector_rag.py
-
-llm_workflow/flow_main/logs/
-test_fastapi_main.py
-test_pytest_main.py
-llm_workflow/prompts/*.yaml
+agents.yaml
