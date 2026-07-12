@@ -1,0 +1,7 @@
+research_task:
+  description: "Conduct thorough research on {topic}"
+  expected_output: "A comprehensive report with key findings"
+
+writing_task:
+  description: "Create engaging content based on research"
+  expected_output: "Publish-ready article"
