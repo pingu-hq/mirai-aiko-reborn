@@ -23,4 +23,5 @@ dependencies = [
     "llama-index-vector-stores-postgres>=0.8.1",
     "slowapi>=0.1.9",
     "crewai>=1.6.1",
+    "mem0ai>=2.0.5",
 ]
