@@ -1,10 +1,25 @@
-from crewai import Crew, Process
+from crewai import Crew, Process, LLM
+from functools import lru_cache
 from app.core.agents.agent_loader import AgentLoader
 from app.core.local_config import settings
 import os
 
 
-os.environ["GROQ_API_KEY"] = settings.groq_api_key.get_secret_value()
+
+def base_llm():
+    return {
+        "base_url":"https://api.groq.com/openai/v1",
+        "max_completion_tokens":10_000, "temperature":.5,
+        "api_key":settings.groq_api_key.get_secret_value(),    "top_p":1,
+    }
+
+@lru_cache()
+def small_llm():
+    return LLM(model="groq/openai/gpt-oss-20b", **base_llm(), reasoning_effort="medium")
+
+@lru_cache()
+def large_llm():
+    return LLM(model="groq/openai/gpt-oss-120b", **base_llm(), reasoning_effort="low",    tools=[{"type":"browser_search"}])
 
 
 
