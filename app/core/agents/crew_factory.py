@@ -39,10 +39,10 @@ class CrewFactory:
 
 def run_mirai_aiko():
     agent_loader = AgentLoader()
-    _researcher = agent_loader.create_agent("researcher", llm="groq/openai/gpt-oss-20b")
-    _writer = agent_loader.create_agent("writer", llm="groq/openai/gpt-oss-20b")
-    agent_loader.create_task("research_task", _researcher)
-    agent_loader.create_task("writing_task", _writer)
+    agent_loader.create_agent("researcher", llm=small_llm())
+    agent_loader.create_agent("writer", llm=small_llm())
+    agent_loader.create_task("research_task", "researcher")
+    agent_loader.create_task("writing_task", "writer")
     crew_instance = CrewFactory(agent_loader)
     the_crew = crew_instance.create_crew()
     result = the_crew.kickoff()
