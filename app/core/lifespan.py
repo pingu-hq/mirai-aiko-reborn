@@ -80,13 +80,13 @@ async def lifespan(app: FastAPI):
         yield
 
     finally:
-        await safe_closure("Redis Jwt Client", close_jwt_redis_client)
+        await safe_closure("Redis Jwt Client", close_jwt_redis_client, is_sync=True)
         await safe_closure("MongoDb Client", close_mongo_db_client, is_sync=False)
-        await safe_closure("Milvus client character knowledge", close_milvus_character_knowledge)
-        await safe_closure("Milvus client message store", close_milvus_message_store)
-        await safe_closure("Httpx sync client", close_httpx_sync_client)
+        await safe_closure("Milvus client character knowledge", close_milvus_character_knowledge, is_sync=True)
+        await safe_closure("Milvus client message store", close_milvus_message_store, is_sync=True)
+        await safe_closure("Httpx sync client", close_httpx_sync_client, is_sync=True)
         await safe_closure("Httpx async client", close_httpx_async_client, is_sync=False)
-        await safe_closure("Azure AI Project", close_azure_ai_project)
-        await safe_closure("Azure Client", close_azure_openai_client)
+        await safe_closure("Azure AI Project", close_azure_ai_project, is_sync=True)
+        await safe_closure("Azure Client", close_azure_openai_client, is_sync=True)
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
-        await safe_closure("Mem0 Client", close_memory_client)
+        await safe_closure("Mem0 Client", close_memory_client, is_sync=True)
