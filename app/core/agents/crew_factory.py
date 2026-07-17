@@ -1,3 +1,4 @@
+from typing import Any
 from crewai import Crew, Process, LLM
 from functools import lru_cache
 from app.core.agents.agent_loader import AgentLoader
@@ -42,7 +43,7 @@ class CrewFactory:
             **kwargs
         )
 
-    def run(self, inputs: dict[str, str] | None = None,**kwargs) -> str:
+    def run(self, inputs: dict[str, Any] | None = None,**kwargs) -> str:
         _crew_instance = self.build_crew(**kwargs)
         results = _crew_instance.kickoff(inputs=inputs) if inputs else _crew_instance.kickoff()
         return results.raw
