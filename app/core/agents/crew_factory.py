@@ -18,7 +18,7 @@ def small_llm():
 
 @lru_cache()
 def large_llm():
-    return LLM(model="groq/openai/gpt-oss-120b", **base_llm(), reasoning_effort="low",    tools=[{"type":"browser_search"}])
+    return LLM(model="groq/openai/gpt-oss-120b", **base_llm(), reasoning_effort="medium")
 
 
 
