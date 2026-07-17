@@ -54,6 +54,11 @@ def init_memory_client():
     if memory_client is None:
         memory_client = Memory.from_config(MEMO_CONFIG)
 
+def close_memory_client():
+    global memory_client
+    if memory_client:
+        memory_client.close()
+
 class MemoryService:
     def __init__(self):
         self.mem_id = None
