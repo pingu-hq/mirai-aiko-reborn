@@ -1,6 +1,8 @@
+from typing import Literal
 from mem0 import Memory
 from app.core.local_config import settings
 from langchain_cohere import CohereEmbeddings
+from json import dumps
 import os
 
 
@@ -30,7 +32,7 @@ MEMO_CONFIG = {
             "model":"openai/gpt-oss-20b",
             "temperature": 0.3,
             "max_tokens": 10_000,
-            "reasoning_effort": "low",
+            "reasoning_effort": "medium",
         }
     },
     "embedder": {
@@ -61,7 +63,7 @@ def close_memory_client():
 
 class MemoryService:
     def __init__(self):
-        self.mem_id = None
+        self.mem_id: list[str] = []
 
     @property
     def memory(self) -> Memory:
@@ -70,14 +72,48 @@ class MemoryService:
     def add_memory(self, user_id: str, content: str):
         self.memory.add(user_id=user_id, messages=content)
 
-    def search_memory(self, user_id: str, content: str):
+    def search_memory(self, user_id: str, content: str, output: Literal["str", "raw"] = "str") -> str | list[dict]:
         results = self.memory.search(query=content, filters={"user_id": user_id})
-        self.mem_id = results["results"][0]["id"]
-        return results
+        self._id_extractor(search_results=results)
+        cleaned_data = self.cleaned_searched_result(search_results=results)
+        if output == "str":
+            return dumps(cleaned_data)
+        return cleaned_data
 
-    def remove_memory(self, mem_id: str):
+    def remove_memory(self, mem_id: str | None = None):
         try:
-            self.memory.delete(memory_id=mem_id)
+            if mem_id:
+                self.memory.delete(memory_id=mem_id)
+                return True
+
+            for mem in self.mem_id:
+                self.memory.delete(memory_id=mem)
+
+            self.mem_id = []
             return True
         except Exception as e:
             return False
+
+    def _id_extractor(self, search_results: dict[str, list[dict]]):
+        for sr in search_results["results"]:
+            memory_id = sr["id"]
+            self.mem_id.append(memory_id)
+
+    @staticmethod
+    def cleaned_searched_result(search_results: dict[str, list[dict]]) -> list[dict]:
+        cleaned_data = []
+        for sr in search_results["results"]:
+
+            timestamps = {"created_at": sr["created_at"]}
+
+            if sr["created_at"] != sr["updated_at"]:
+                timestamps["updated_at"] = sr["updated_at"]
+
+            result_data = {
+                "memory": sr['memory'],
+                "metadata": sr['metadata'],
+                "score": sr['score'],
+                **timestamps
+            }
+            cleaned_data.append(result_data)
+        return cleaned_data
