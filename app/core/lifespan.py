@@ -33,6 +33,10 @@ close_azure_openai_client,
 close_azure_ai_project,
 close_groq_client
 )
+from app.services.data.memory_service import (
+init_memory_client,
+close_memory_client
+)
 
 
 async def safe_closure(name: str, close_func, is_sync: bool = True):
@@ -72,6 +76,7 @@ async def lifespan(app: FastAPI):
         safe_init("Azure AI Project", init_azure_ai_project)
         safe_init("Azure Client", init_azure_client)
         safe_init("Groq Client", init_groq_client)
+        safe_init("Mem0 Client", init_memory_client)
         yield
 
     finally:
@@ -84,3 +89,4 @@ async def lifespan(app: FastAPI):
         await safe_closure("Azure AI Project", close_azure_ai_project)
         await safe_closure("Azure Client", close_azure_openai_client)
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
+        await safe_closure("Mem0 Client", close_memory_client)
