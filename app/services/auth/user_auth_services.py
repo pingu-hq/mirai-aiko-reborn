@@ -3,8 +3,10 @@ from app.repositories.no_sql_database.mongo_db_repository import UsersCollection
 from app.models.users import UserFormModel
 from app.core.logger import app_logger
 from functools import cached_property
-from datetime import datetime,timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from cachetools import TTLCache
+from asyncio import Lock
 import ulid
 
 
@@ -172,3 +174,34 @@ class AuthUserRegisterService:
             return True
         except Exception as e:
             return False
+
+
+
+class LoginStateService:
+    _default_time_expire = timedelta(days=7).total_seconds()
+    _cached_states = TTLCache(maxsize=10_000, ttl=_default_time_expire)
+    _lock = Lock()
+
+    async def insert_email_here(self, email):
+        async with self._lock:
+            self._cached_states[email] = True
+
+
+    async def check_email_if_logged_in(self, email):
+        if email not in self._cached_states:
+            return False
+
+        await self.insert_email_here(email=email)
+        return True
+
+    async def login_by_email(self, email):
+        if await self.check_email_if_logged_in(email=email):
+            return False
+
+        await self.insert_email_here(email=email)
+        return True
+
+    async def logout_by_email(self, email):
+        async with self._lock:
+            self._cached_states.pop(email, None)
+
