@@ -62,6 +62,11 @@ class CrewFactory:
         results = _crew_instance.kickoff(inputs=inputs) if inputs else _crew_instance.kickoff()
         return results.raw
 
+    async def run_async(self, inputs: dict[str, Any] | None = None, **kwargs) -> str:
+        _crew_instance = self.build_crew(**kwargs)
+        results = await _crew_instance.kickoff_async(inputs=inputs) if inputs else await _crew_instance.kickoff_async()
+        return results.raw
+
 
 
 
