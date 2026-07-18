@@ -1,5 +1,6 @@
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
+from app.schemas.users import UserRegisterV1, UserLoginV1
 from app.models.users import UserFormModel
 from app.core.logger import app_logger
 from functools import cached_property
@@ -132,6 +133,15 @@ class AuthUserLoginService:
             return False
         return True
 
+
+    async def get_id_for_token_from_login_v1(self, user: UserLoginV1):
+        await self.insert_email(email=user.email)
+        if not await self.verify_password(password=user.password):
+            return None
+        return self.get_external_id()
+
+
+
 class AuthUserRegisterService:
     _external_id = "external_id"
     _password = "password"
@@ -188,6 +198,29 @@ class AuthUserRegisterService:
         except Exception as e:
             return False
 
+    async def get_updated_form_v1(self, user: UserRegisterV1):
+        hashed_password = await self.hash_password(user.password)
+        date_created = user.date_created
+        external_id = user.external_id
+
+        return {
+            self._date_created: date_created,
+            self._external_id: external_id,
+            self._email: user.email,
+            self._password: hashed_password,
+        }
+
+    async def signup_user_v1(self, user_register: UserRegisterV1):
+        try:
+            is_safe = await self.safe_to_register_user(email=user_register.email)
+            if not is_safe:
+                return False
+
+            user_form = self.get_updated_form_v1(user_register)
+            await self.mongo_db.users.insert_one(user_form)
+            return True
+        except Exception as e:
+            return False
 
 
 class LoginStateService:
