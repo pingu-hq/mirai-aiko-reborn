@@ -7,7 +7,7 @@ from threading import Lock
 
 
 
-_llm_cache = TTLCache(maxsize=10, ttl=3600)
+_llm_cache: TTLCache | None = None
 _cache_lock = Lock()
 
 
@@ -36,6 +36,19 @@ def get_gpt_oss_llm(model: str, reasoning_effort: Literal["none", "low", "medium
 small_llm = lambda: get_gpt_oss_llm(model="groq/openai/gpt-oss-20b", reasoning_effort="medium")
 large_llm = lambda: get_gpt_oss_llm(model="groq/openai/gpt-oss-120b", reasoning_effort="medium")
 
+
+def init_cache_and_crew_llms():
+    global _llm_cache
+    if _llm_cache is None:
+        _llm_cache = TTLCache(maxsize=10, ttl=3600)
+        small_llm()
+        large_llm()
+
+def close_cache_and_crew_llms():
+    global _llm_cache
+    if _llm_cache:
+        _llm_cache.expire()
+        _llm_cache.clear()
 
 
 class CrewFactory:
