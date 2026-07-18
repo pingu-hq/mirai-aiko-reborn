@@ -1,9 +1,14 @@
-from typing import Any
+from typing import Any, Literal
 from crewai import Crew, Process, LLM
-from functools import lru_cache
+from cachetools import TTLCache
 from app.core.agents.agent_loader import AgentLoader
 from app.core.local_config import settings
+from threading import Lock
 
+
+
+_llm_cache = TTLCache(maxsize=10, ttl=3600)
+_cache_lock = Lock()
 
 
 def base_llm():
@@ -13,14 +18,23 @@ def base_llm():
         "api_key":settings.groq_api_key.get_secret_value(),    "top_p":1,
     }
 
-@lru_cache()
-def small_llm():
-    return LLM(model="groq/openai/gpt-oss-20b", **base_llm(), reasoning_effort="medium")
 
-@lru_cache()
-def large_llm():
-    return LLM(model="groq/openai/gpt-oss-120b", **base_llm(), reasoning_effort="medium")
+def get_gpt_oss_llm(model: str, reasoning_effort: Literal["none", "low", "medium", "high"]) -> LLM:
+    key = f"{model}:{reasoning_effort}"
+    with _cache_lock:
+        if key not in _llm_cache:
+            _llm_cache[key] = LLM(
+                model=model,
+                reasoning_effort=reasoning_effort,
+                **base_llm()
+            )
+        return _llm_cache[key]
 
+
+
+
+small_llm = lambda: get_gpt_oss_llm(model="groq/openai/gpt-oss-20b", reasoning_effort="medium")
+large_llm = lambda: get_gpt_oss_llm(model="groq/openai/gpt-oss-120b", reasoning_effort="medium")
 
 
 
