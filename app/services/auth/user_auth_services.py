@@ -158,10 +158,20 @@ class AuthUserRegisterService:
     def get_new_uid():
         return ulid.new().str
 
-    def get_updated_form(self, email, password) -> dict[str, str | datetime]:
+    async def hash_password(self, password: str):
+        return await self.auth_pass_service.make_hash_password(password=password)
+
+    async def safe_to_register_user(self, email: str):
+        existing = await self.mongo_db.users.find_one({self._email: email})
+        if existing:
+            return False
+        return True
+
+    async def get_updated_form(self, email: str, password: str) -> dict[str, str | datetime]:
+        _password = await self.hash_password(password)
         user_form = {
             self._email: email,
-            self._password: password,
+            self._password: _password,
             self._date_created: self.get_date_created(),
             self._external_id: self.get_new_uid()
         }
@@ -169,7 +179,10 @@ class AuthUserRegisterService:
 
     async def signup_user(self, email: str, password: str):
         try:
-            user_form = self.get_updated_form(email, password)
+            is_safe = await self.safe_to_register_user(email=email)
+            if not is_safe:
+                return False
+            user_form = await self.get_updated_form(email=email, password=password)
             await self.mongo_db.users.insert_one(user_form)
             return True
         except Exception as e:
