@@ -1,5 +1,5 @@
 from typing import Literal
-from mem0 import Memory
+from mem0 import Memory, AsyncMemory
 from app.core.local_config import settings
 from langchain_cohere import CohereEmbeddings
 from json import dumps
@@ -44,11 +44,9 @@ MEMO_CONFIG = {
 
 }
 
-mem_zero = Memory.from_config(MEMO_CONFIG)
-
-
 
 memory_client: Memory | None = None
+async_memory_client: AsyncMemory | None = None
 
 
 def init_memory_client():
@@ -61,7 +59,7 @@ def close_memory_client():
     if memory_client:
         memory_client.close()
 
-class MemoryService:
+class MemZeroMemoryService:
     def __init__(self):
         self.mem_id: list[str] = []
 
@@ -98,6 +96,45 @@ class MemoryService:
         for sr in search_results["results"]:
             memory_id = sr["id"]
             self.mem_id.append(memory_id)
+
+    @staticmethod
+    def cleaned_searched_result(search_results: dict[str, list[dict]]) -> list[dict]:
+        cleaned_data = []
+        for sr in search_results["results"]:
+
+            timestamps = {"created_at": sr["created_at"]}
+
+            if sr["created_at"] != sr["updated_at"]:
+                timestamps["updated_at"] = sr["updated_at"]
+
+            result_data = {
+                "memory": sr['memory'],
+                "metadata": sr['metadata'],
+                "score": sr['score'],
+                **timestamps
+            }
+            cleaned_data.append(result_data)
+        return cleaned_data
+
+
+class AsyncMemZeroMemoryService:
+
+    @property
+    def memory_client(self) -> AsyncMemory:
+        global async_memory_client
+        if async_memory_client is None:
+            async_memory_client = AsyncMemory.from_config(MEMO_CONFIG)
+        return async_memory_client
+
+    async def add_memory(self, user_id: str, content: str):
+        await self.memory_client.add(user_id=user_id, messages=content)
+
+    async def search_memory(self, user_id: str, content: str, output: Literal["str", "raw"] = "str"):
+        results = await self.memory_client.search(query=content, filters={"user_id": user_id})
+        cleaned_data = self.cleaned_searched_result(search_results=results)
+        if output == "str":
+            return dumps(cleaned_data)
+        return cleaned_data
 
     @staticmethod
     def cleaned_searched_result(search_results: dict[str, list[dict]]) -> list[dict]:
