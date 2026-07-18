@@ -17,18 +17,13 @@ def _date_created():
 
 
 
-
-
-class UserLoginResponse(BaseModel):
-    email: EmailStr = Field(..., description="User's email")
-
-class UserCreateRequest(UserLoginResponse):
+class UserLoginV1(BaseModel):
+    email: str = Field(..., description="User's email")
     password: str = Field(min_length=2, description="Password for this user")
 
-class UserLoginRequestRequest(UserCreateRequest):
-    date_created: datetime = Field(
-        default_factory=_date_created
-    )
-    external_id: str = Field(default_factory=_new_ulid)
 
-
+class UserRegisterV1(BaseModel):
+    email: str = Field(..., description="User's email")
+    password: str = Field(min_length=2, description="Password for this user")
+    date_created: datetime = Field(default_factory=_date_created, exclude=True, init=False)
+    external_id: str = Field(default_factory=_new_ulid, exclude=True, init=False)
