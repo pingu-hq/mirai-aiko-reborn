@@ -4,10 +4,11 @@ from app.dependencies.auth import (
     get_http_cookie_manager_service,
     get_user_login_service,
     get_user_create_service,
-    get_user_id_from_cookie
+    get_user_id_from_cookie,
+    get_login_state_service
 )
 from app.core.logger import app_logger
-from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService
+from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService, LoginStateService
 from app.schemas.users import *
 
 router = APIRouter(
@@ -22,6 +23,7 @@ async def login_endpoint_v1(
         user: UserLoginRequestRequest,
         http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
         login_service: AuthUserLoginService = Depends(get_user_login_service)
+        state: LoginStateService = Depends(get_login_state_service)
 ):
     try:
         await login_service.insert_email(email=user.email)
@@ -30,6 +32,8 @@ async def login_endpoint_v1(
 
         external_id = login_service.get_external_id()
         http_cookie.setting_http_cookie(sub=external_id)
+        if not await state.login_by_email(email=sub_id):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
         app_logger.info(f"The User ({user.email}) has successfully logged in")
         return UserLoginResponse(email=user.email)
@@ -72,6 +76,9 @@ async def check_user_v1(user_id: str = Depends(get_user_id_from_cookie)):
 @router.delete("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout_endpoint_v1(
         http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
+        user_id: str = Depends(get_user_id_from_cookie),
+        state: LoginStateService = Depends(get_login_state_service)
 ):
     http_cookie.deleting_id_from_http_cookie()
+    await state.logout_by_email(user_id)
     app_logger.info("User logged out")
