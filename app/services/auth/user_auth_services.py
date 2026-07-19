@@ -205,7 +205,7 @@ class AuthUserRegisterService:
             if not is_safe:
                 return False
 
-            user_form = self.get_updated_form_v1(user_register)
+            user_form = await self.get_updated_form_v1(user_register)
             await self.mongo_db.users.insert_one(user_form)
             return True
         except Exception as e:
