@@ -227,7 +227,7 @@ class HttpCookieManagerService:
             secret_key=self.secret_key.get_secret_value()
         )
         sub = self._get_sub_from_payload(payload, "access")
-        jti_key = self._get_jti_from_payload(payload, "refresh")
+        jti_key = self._get_jti_from_payload(payload, "access")
 
         jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
 
