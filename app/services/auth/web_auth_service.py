@@ -78,9 +78,12 @@ class JwtTokenService:
         )
         return jti_key
 
-    def read_jti(self, jti_key):
+    def read_jti(self, jti_key: str | None):
         if self.jti_cache is None:
             raise ConnectionError("No redis client injected")
+
+        if jti_key is None:
+            return None
 
         raw_value = self.jti_cache.get_value(jti_key)
         if not raw_value:
@@ -229,10 +232,13 @@ class HttpCookieManagerService:
         sub = self._get_sub_from_payload(payload, "access")
         jti_key = self._get_jti_from_payload(payload, "access")
 
+        if jti_key is None:
+            return sub, None
+
         jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
 
-        if not jti_exist:
-            jti_key = None
+        if jti_exist is None:
+            return sub, None
 
         return sub, jti_key
 
@@ -245,11 +251,13 @@ class HttpCookieManagerService:
         sub = self._get_sub_from_payload(payload, "refresh")
         jti_key = self._get_jti_from_payload(payload, "refresh")
 
+        if jti_key is None:
+            return sub, None
+
         jti_exist = self.jwt_service.read_jti(jti_key=jti_key)
 
-
-        if not jti_exist:
-            jti_key = None
+        if jti_exist is None:
+            return sub, None
 
         return sub, jti_key
 
