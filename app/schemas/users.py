@@ -25,5 +25,11 @@ class UserLoginV1(BaseModel):
 class UserRegisterV1(BaseModel):
     email: str = Field(..., description="User's email")
     password: str = Field(min_length=2, description="Password for this user")
-    date_created: datetime = Field(default_factory=_date_created, exclude=True, init=False)
-    external_id: str = Field(default_factory=_new_ulid, exclude=True, init=False)
+
+    def to_mongo_db(self, hash_password: str):
+        return {
+            **self.model_dump(),
+            "password": hash_password,
+            "external_id": ulid.new().str,
+            "date_created": datetime.now(_get_ph_timezone()),
+        }
