@@ -2,7 +2,7 @@ from app.repositories.in_memory_database.redis_repository import JtiCacheReposit
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.services.auth.web_auth_service import JwtTokenService, JwtAndCookieHandlerService, HttpCookieManagerService
-from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService
+from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService, LoginStateService
 from fastapi import Depends, Request, Response
 
 
@@ -67,3 +67,7 @@ def get_user_id_from_cookie(
         cookie_service: HttpCookieManagerService = Depends(get_http_cookie_manager_service)
 ) -> str:
     return cookie_service.get_existing_user_id_from_cookie()
+
+
+def get_login_state_service() -> LoginStateService:
+    return LoginStateService()
