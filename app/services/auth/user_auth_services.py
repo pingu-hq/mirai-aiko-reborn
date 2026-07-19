@@ -124,14 +124,11 @@ class AuthUserLoginService:
     def get_date_created(self):
         return self.internal_get_state(self._date_created)
 
-    async def verify_password(self, password):
-        current_hashed_password = self.document_state.get("password")
-        is_valid = await self.auth_pass_service.verify_hash_password(
-            password=password, hash_password=current_hashed_password
+    async def verify_password(self, password) -> bool:
+        hash_password = self.get_password()
+        return await self.auth_pass_service.verify_hash_password(
+            password=password, hash_password=hash_password
         )
-        if not is_valid:
-            return False
-        return True
 
 
     async def get_id_for_token_from_login_v1(self, user: UserLoginV1):
