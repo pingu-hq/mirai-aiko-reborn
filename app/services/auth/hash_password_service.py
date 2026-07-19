@@ -25,15 +25,15 @@ class AuthPasswordService:
         except HashingError:
             return None
 
-    async def verify_hash_password(self, hash_password: str | None, password: str | None):
+    async def verify_hash_password(self, hash_password: str | None, password: str | None) -> bool:
         if password is None or hash_password is None:
-            return None
+            return False
         try:
             return await to_thread(
                 self._verify_password,
                 hash_password, password
             )
         except (VerifyMismatchError, VerificationError, InvalidHashError):
-            return None
+            return False
 
 
