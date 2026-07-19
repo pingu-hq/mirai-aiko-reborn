@@ -199,16 +199,8 @@ class AuthUserRegisterService:
             return False
 
     async def get_updated_form_v1(self, user: UserRegisterV1):
-        hashed_password = await self.hash_password(user.password)
-        date_created = user.date_created
-        external_id = user.external_id
-
-        return {
-            self._date_created: date_created,
-            self._external_id: external_id,
-            self._email: user.email,
-            self._password: hashed_password,
-        }
+        hash_password = await self.hash_password(user.password)
+        return user.to_mongo_db(hash_password=hash_password)
 
     async def signup_user_v1(self, user_register: UserRegisterV1):
         try:
