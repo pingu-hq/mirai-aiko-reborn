@@ -20,23 +20,23 @@ router = APIRouter(
 
 @router.post("/login", status_code=status.HTTP_200_OK)
 async def login_endpoint_v1(
-        user: UserLoginRequestRequest,
+        user: UserLoginV1,
         http_cookie: HttpCookieManagerService = Depends(get_http_cookie_manager_service),
-        login_service: AuthUserLoginService = Depends(get_user_login_service)
+        login_service: AuthUserLoginService = Depends(get_user_login_service),
         state: LoginStateService = Depends(get_login_state_service)
 ):
     try:
-        await login_service.insert_email(email=user.email)
-        if not await login_service.verify_password(password=user.password):
+        sub_id = await login_service.get_id_for_token_from_login_v1(user=user)
+        if not sub_id:
+            app_logger.error(f"The User ({user.email}) password is incorrect")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
-        external_id = login_service.get_external_id()
-        http_cookie.setting_http_cookie(sub=external_id)
         if not await state.login_by_email(email=sub_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
+        http_cookie.setting_http_cookie(sub=sub_id)
         app_logger.info(f"The User ({user.email}) has successfully logged in")
-        return UserLoginResponse(email=user.email)
+        return {"status": "Ok", "extra": user.email}
     except Exception as e:
         app_logger.error(f"User login error: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
@@ -44,16 +44,13 @@ async def login_endpoint_v1(
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup_endpoint_v1(
-        user: UserCreateRequest,
-        register_service: AuthUserRegisterService = Depends(get_user_create_service)
+        user: UserRegisterV1,
+        register_service: AuthUserRegisterService = Depends(get_user_create_service),
 ):
     try:
-        is_created = await register_service.signup_user(
-            email=user.email,
-            password=user.password
-        )
-        if is_created:
-            return UserLoginResponse(email=user.email)
+        is_registered = await register_service.signup_user_v1(user_register=user)
+        if is_registered:
+            return {"status": "Ok", "extra": user.email}
 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
     except Exception as e:
