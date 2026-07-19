@@ -213,15 +213,15 @@ class HttpCookieManagerService:
             return access_id
 
         refresh_id, refresh_jti = self._get_refresh_sub_and_jti()
-        if not refresh_id or not refresh_jti:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-        self.jwt_service.delete_jti(refresh_jti)
-        http_cookie = self.setting_http_cookie(sub=refresh_id)
-        if not http_cookie:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-        return refresh_id
+        if refresh_id and refresh_jti:
+            self.jwt_service.delete_jti(refresh_jti)
+            http_cookie = self.setting_http_cookie(sub=refresh_id)
 
+            if http_cookie:
+                return refresh_id
+
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     def _get_access_sub_and_jti(self) -> tuple[str | None, str | None]:
         raw_jwt = self.auth_handler_service.get_raw_jwt_access_token_from_cookie()
