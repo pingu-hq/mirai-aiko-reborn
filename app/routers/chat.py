@@ -1,13 +1,15 @@
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.services.agents.sample_agent_service import AgentService
-from app.dependencies.auth import get_user_id_from_cookie
-from app.dependencies.chat import get_agent_service
+from app.services.auth.opaque_auth_service import OpaqueAuthService
+from app.services.agents.lotus_crew_service import LotusCrewService
+from app.services.data.memory_service import AsyncMemZeroMemoryService
+from app.dependencies.chat import get_async_mem_zero_service, get_lotus_crew_service
+from app.dependencies.auth import get_opaque_auth_service
 
 
 
 router = APIRouter(
-    prefix="/api/chat", tags=["chat"]
+    prefix="/api/chat", tags=["Send chat to Mirai Aiko Crew"]
 )
 
 
@@ -17,17 +19,23 @@ class Chat(BaseModel):
 @router.post("/send", status_code=status.HTTP_200_OK)
 async def send_messages(
         chat: Chat,
-        user_id: str = Depends(get_user_id_from_cookie),
-        agent: AgentService = Depends(get_agent_service)
+        opaque: OpaqueAuthService = Depends(get_opaque_auth_service),
+        memory: AsyncMemZeroMemoryService = Depends(get_async_mem_zero_service),
+        agent: LotusCrewService = Depends(get_lotus_crew_service)
 ):
     try:
-        assistant_response = await agent.full_message_completion(
-            user_id=user_id,
-            content=chat.message
+        user_id = await opaque.get_user_id()
+        current_memory = await memory.search_memory(user_id=user_id, content=chat.message)
+        response = await agent.run_async(
+            inputs={
+                "user_id": user_id,
+                "user_input": chat.message,
+                "memory_context": current_memory
+            }
         )
-        return Chat(message=assistant_response)
+        return Chat(message=response)
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error endpoint /send : {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        print(f"Error endpoint /send-message-to-mirai-aiko : {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
