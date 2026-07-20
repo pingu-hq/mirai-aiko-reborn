@@ -17,7 +17,6 @@ def init_jwt_redis_client():
         db=0,
         max_connections=15,
         socket_timeout=5,
-        retry_on_timeout=True
     )
 
 
