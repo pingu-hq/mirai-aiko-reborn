@@ -217,26 +217,25 @@ class LoginStateService:
     _cached_states = TTLCache(maxsize=10_000, ttl=_default_time_expire)
     _lock = Lock()
 
-    async def insert_email_here(self, email):
+
+    async def insert_input_id_here(self, input_id: str):
         async with self._lock:
-            self._cached_states[email] = True
+            self._cached_states[input_id] = True
 
-
-    async def check_email_if_logged_in(self, email):
-        if email not in self._cached_states:
+    async def check_id_if_logged_in(self, input_id):
+        if input_id not in self._cached_states:
             return False
 
-        await self.insert_email_here(email=email)
+        await self.insert_input_id_here(input_id)
         return True
 
-    async def login_by_email(self, email):
-        if await self.check_email_if_logged_in(email=email):
+    async def login_by_id(self, input_id: str):
+        if await self.check_id_if_logged_in(input_id=input_id):
             return False
 
-        await self.insert_email_here(email=email)
+        await self.insert_input_id_here(input_id)
         return True
 
-    async def logout_by_email(self, email):
+    async def logout_by_id(self, input_id: str):
         async with self._lock:
-            self._cached_states.pop(email, None)
-
+            self._cached_states.pop(input_id, None)

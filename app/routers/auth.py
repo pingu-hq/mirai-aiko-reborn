@@ -31,7 +31,7 @@ async def login_endpoint_v1(
             app_logger.error(f"The User ({user.email}) password is incorrect")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
-        if not await state.login_by_email(email=sub_id):
+        if not await state.login_by_id(input_id=sub_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized Error")
 
         http_cookie.setting_http_cookie(sub=sub_id)
@@ -77,5 +77,5 @@ async def logout_endpoint_v1(
         state: LoginStateService = Depends(get_login_state_service)
 ):
     http_cookie.deleting_id_from_http_cookie()
-    await state.logout_by_email(user_id)
+    await state.logout_by_id(input_id=user_id)
     app_logger.info("User logged out")
