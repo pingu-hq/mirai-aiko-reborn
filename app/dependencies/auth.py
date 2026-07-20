@@ -1,10 +1,21 @@
-from app.repositories.in_memory_database.redis_repository import JtiCacheRepository
+from app.repositories.in_memory_database.redis_repository import JtiCacheRepository, RedisAsyncRepository
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from app.services.auth.hash_password_service import AuthPasswordService
-from app.services.auth.web_auth_service import JwtTokenService, JwtAndCookieHandlerService, HttpCookieManagerService
-from app.services.auth.user_auth_services import AuthUserLoginService, AuthUserRegisterService, LoginStateService
+from app.services.auth.web_auth_service import (
+JwtTokenService,
+JwtAndCookieHandlerService,
+HttpCookieManagerService
+)
+from app.services.auth.user_auth_services import (
+AuthUserLoginService,
+AuthUserRegisterService,
+LoginStateService
+)
+from app.services.auth.opaque_auth_service import OpaqueAuthService
 from fastapi import Depends, Request, Response
 
+def get_redis_async_repository() -> RedisAsyncRepository:
+    return RedisAsyncRepository()
 
 
 def get_redis_repository() -> JtiCacheRepository:
@@ -71,3 +82,12 @@ def get_user_id_from_cookie(
 
 def get_login_state_service() -> LoginStateService:
     return LoginStateService()
+
+def get_opaque_auth_service(
+        request: Request, response: Response,
+        redis_async_repository: RedisAsyncRepository = Depends(get_redis_async_repository),
+) -> OpaqueAuthService:
+    return OpaqueAuthService(
+        request=request, response=response,
+        redis_repository=redis_async_repository,
+    )
