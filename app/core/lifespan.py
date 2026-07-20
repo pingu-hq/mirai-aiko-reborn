@@ -6,7 +6,9 @@ from asyncio import to_thread
 from app.core.logger import app_logger
 from app.repositories.in_memory_database.redis_repository import (
 init_jwt_redis_client,
-close_jwt_redis_client
+close_jwt_redis_client,
+init_redis_client_async,
+close_redis_client_async
 )
 from app.repositories.no_sql_database.mongo_db_repository import (
 init_mongo_db_client,
@@ -72,6 +74,7 @@ async def lifespan(app: FastAPI):
     app_logger.info("Fastapi Async context manager startup!")
     try:
         safe_init("Redis Jwt Client", init_jwt_redis_client)
+        safe_init("Redis Async Client", init_redis_client_async)
         safe_init("MongoDb Client", init_mongo_db_client)
         safe_init("Milvus client character knowledge", init_milvus_character_knowledge)
         safe_init("Milvus client message store", init_milvus_message_store)
@@ -88,6 +91,7 @@ async def lifespan(app: FastAPI):
 
     finally:
         await safe_closure("Redis Jwt Client", close_jwt_redis_client, is_sync=True)
+        await safe_closure("Redis Async Client", close_redis_client_async, is_sync=False)
         await safe_closure("MongoDb Client", close_mongo_db_client, is_sync=False)
         await safe_closure("Milvus client character knowledge", close_milvus_character_knowledge, is_sync=True)
         await safe_closure("Milvus client message store", close_milvus_message_store, is_sync=True)
