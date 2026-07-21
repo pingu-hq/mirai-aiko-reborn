@@ -62,7 +62,7 @@ def init_redis_client_async():
 async def close_redis_client_async():
     global _redis_client_async
     if _redis_client_async:
-        await _redis_client_async.close()
+        await _redis_client_async.aclose()
 
 class RedisAsyncRepository:
 
