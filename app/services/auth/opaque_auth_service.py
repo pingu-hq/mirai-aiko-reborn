@@ -164,5 +164,6 @@ class OpaqueAuthService:
                 refresh_token=refresh_token
             )
             return ref_user_id
+        return None
 
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
