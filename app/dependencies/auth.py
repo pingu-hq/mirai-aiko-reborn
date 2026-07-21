@@ -9,7 +9,6 @@ HttpCookieManagerService
 from app.services.auth.user_auth_services import (
 AuthUserLoginService,
 AuthUserRegisterService,
-LoginStateService
 )
 from app.services.auth.opaque_auth_service import OpaqueAuthService
 from fastapi import Depends, Request, Response
@@ -79,9 +78,6 @@ def get_user_id_from_cookie(
 ) -> str:
     return cookie_service.get_existing_user_id_from_cookie()
 
-
-def get_login_state_service() -> LoginStateService:
-    return LoginStateService()
 
 def get_opaque_auth_service(
         request: Request, response: Response,

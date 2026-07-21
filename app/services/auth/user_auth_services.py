@@ -210,32 +210,3 @@ class AuthUserRegisterService:
             return True
         except Exception as e:
             return False
-
-
-class LoginStateService:
-    _default_time_expire = timedelta(days=7).total_seconds()
-    _cached_states = TTLCache(maxsize=10_000, ttl=_default_time_expire)
-    _lock = Lock()
-
-
-    async def insert_input_id_here(self, input_id: str):
-        async with self._lock:
-            self._cached_states[input_id] = True
-
-    async def check_id_if_logged_in(self, input_id):
-        if input_id not in self._cached_states:
-            return False
-
-        await self.insert_input_id_here(input_id)
-        return True
-
-    async def login_by_id(self, input_id: str):
-        if await self.check_id_if_logged_in(input_id=input_id):
-            return False
-
-        await self.insert_input_id_here(input_id)
-        return True
-
-    async def logout_by_id(self, input_id: str):
-        async with self._lock:
-            self._cached_states.pop(input_id, None)

@@ -165,4 +165,10 @@ class OpaqueAuthService:
             return ref_user_id
         return None
 
+    async def block_re_login_user(self, _id: Any):
+        browser_user_id = await self.get_user_id()
+        if _id and browser_user_id:
+            if _id == browser_user_id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User already logged in to your device")
+
 
