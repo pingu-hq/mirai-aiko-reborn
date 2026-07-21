@@ -27,14 +27,6 @@ init_milvus_character_knowledge,
 close_milvus_message_store,
 close_milvus_character_knowledge
 )
-from app.services.agents.sample_agent_service import (
-init_azure_ai_project,
-init_groq_client,
-init_azure_client,
-close_azure_openai_client,
-close_azure_ai_project,
-close_groq_client
-)
 from app.services.data.memory_service import (
 init_memory_client,
 close_memory_client
