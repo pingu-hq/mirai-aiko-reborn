@@ -201,8 +201,10 @@ class OpaqueAuthService:
 
     async def block_re_login_user(self, _id: Any):
         browser_user_id = await self.get_user_id()
+        app_logger.debug("Starting to check user to block re-login")
         if _id and browser_user_id:
             if _id == browser_user_id:
+                app_logger.debug(f"Failing User:{_id} to re-log as there is still user existing in cookies.")
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User already logged in to your device")
 
 
