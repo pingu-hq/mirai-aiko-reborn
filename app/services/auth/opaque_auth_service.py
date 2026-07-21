@@ -1,10 +1,11 @@
-from typing import Literal
+from typing import Literal, Any
 from datetime import timedelta, datetime
 from zoneinfo import ZoneInfo
 from app.core.local_config import settings
 from app.repositories.in_memory_database.redis_repository import RedisAsyncRepository
 from fastapi import Request, Response, HTTPException, status
 import secrets
+from app.core.logger import app_logger
 
 
 class OpaqueAuthService:
@@ -25,55 +26,78 @@ class OpaqueAuthService:
             return False
         return True
 
+    def error_503(self,message: str, ex = None):
+        log_details = f"Details: {message}"
+        if ex:
+            log_details += f" // Exception: {str(ex)}"
+        app_logger.error(log_details)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service Unavailable")
+
+    def error_401(self,message: str, ex = None):
+        log_details = f"Details: {message}"
+        if ex:
+            log_details += f" // Exception: {str(ex)}"
+        app_logger.error(log_details)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+
+
 
     async def create_opaque_token_redis(self, input_id: str, token_type: Literal["access", "refresh"]):
-        opaque_token_key = secrets.token_urlsafe(32)
+        try:
+            opaque_token_key = secrets.token_urlsafe(32)
 
-        if token_type == "access":
-            exp_time = timedelta(minutes=5)
-        else:
-            exp_time = timedelta(days=15)
+            if token_type == "access":
+                exp_time = timedelta(minutes=5)
+            else:
+                exp_time = timedelta(days=15)
 
-        token_value = {
-            "user_id": input_id,
-            "date_created": datetime.now(self._zone_info).isoformat(),
-            "token_type": token_type,
-        }
-        if await self.redis_repo.add_value(
-                input_key=opaque_token_key,
-                input_value=token_value,
-                exp=exp_time
-        ):
-            return opaque_token_key
-        return None
+            token_value = {
+                "user_id": input_id,
+                "date_created": datetime.now(self._zone_info).isoformat(),
+                "token_type": token_type,
+            }
+            if await self.redis_repo.add_value(
+                    input_key=opaque_token_key,
+                    input_value=token_value,
+                    exp=exp_time
+            ):
+                return opaque_token_key
+            self.error_503(message="Opaque token failed to add values to redis")
+        except Exception as ex:
+            self.error_503(ex=ex, message="Redis opaque token creation failed")
 
 
 
     async def create_http_cookie(self, token_type: Literal["access", "refresh"], input_id: str):
+        try:
+            if token_type == "access":
+                samesite = "lax"
+                exp_time = timedelta(minutes=5)
+            else:
+                samesite = "strict"
+                exp_time = timedelta(days=15)
 
-        if token_type == "access":
-            samesite = "lax"
-            exp_time = timedelta(minutes=5)
-        else:
-            samesite = "strict"
-            exp_time = timedelta(days=15)
 
+            max_age = int(exp_time.total_seconds())
 
-        max_age = int(exp_time.total_seconds())
+            opaque_token = await self.create_opaque_token_redis(input_id=input_id, token_type=token_type)
 
-        opaque_token = await self.create_opaque_token_redis(input_id=input_id, token_type=token_type)
+            self.response.set_cookie(
+                key=token_type,
+                value=opaque_token,
+                max_age=max_age,
+                samesite=samesite,
+                httponly=True,
+                secure=self.secure,
+                path="/"
+            )
 
-        self.response.set_cookie(
-            key=token_type,
-            value=opaque_token,
-            max_age=max_age,
-            samesite=samesite,
-            httponly=True,
-            secure=self.secure,
-            path="/"
-        )
-
-        return opaque_token
+            return opaque_token
+        except HTTPException:
+            raise
+        except Exception as ex:
+            raise self.error_401(ex=ex, message="HTTP Cookie creation failed")
 
     def get_raw_token_from_http_cookie(self, token_type: Literal["access", "refresh"]):
         raw_token = self.request.cookies.get(token_type, None)
