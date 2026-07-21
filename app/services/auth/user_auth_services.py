@@ -1,3 +1,4 @@
+from fastapi import HTTPException, status
 from app.services.auth.hash_password_service import AuthPasswordService
 from app.repositories.no_sql_database.mongo_db_repository import UsersCollectionRepository
 from app.schemas.users import UserRegisterV1, UserLoginV1
@@ -76,9 +77,9 @@ class UserAuthenticationService:
 
 
 class AuthUserLoginService:
+    _email = "email"
     _external_id = "external_id"
     _password = "password"
-    _date_created = "date_created"
 
     def __init__(
             self,
@@ -87,56 +88,45 @@ class AuthUserLoginService:
     ):
         self.mongo_db = mongo_db
         self.auth_pass_service = auth_pass_service
-        self.document_state = None
-        self.email_as_key = None
 
-    async def insert_email(self, email):
+    def error_401(self, message: str, ex=None):
+        log_details = f"Details: {message}"
+        if ex:
+            log_details += f" // Exception: {str(ex)}"
+        app_logger.error(log_details)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    def error_500(self, message: str, ex=None):
+        log_details = f"Details: {message}"
+        if ex:
+            log_details += f" // Exception: {str(ex)}"
+        app_logger.error(log_details)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service Unavailable")
+
+
+
+    async def login_user_to_get_id(self, user: UserLoginV1) -> str:
         try:
-            self.email_as_key = email
-            self.document_state = await self.mongo_db.users.find_one({"email": email})
-            if self.document_state is None:
-                return False
-            return True
-        except Exception as e:
-            self.document_state = None
-            self.email_as_key = None
-            return False
+            user_data = await self.mongo_db.users.find_one({self._email: user.email})
 
-    @staticmethod
-    def state_error():
-        raise Exception("State is None. Please insert email through insert_email function")
+            if user_data:
+                hash_password = user_data.get(self._password)
+                external_id = user_data.get(self._external_id)
+                if external_id is None:
+                    self.error_500("External id doesnt exist")
 
-    def internal_get_state(self, key):
-        if self.document_state is None:
-            raise self.state_error()
-        value = self.document_state.get(key)
-        if not value:
-            return None
-        return value
+                hash_verify = await self.auth_pass_service.verify_hash_password(
+                    hash_password=hash_password, password=user.password
+                )
+                if hash_verify:
+                    return user_data.get(self._external_id)
 
+                self.error_401(f"Verification for password of User({user.email} failed")
 
-    def get_external_id(self):
-        return self.internal_get_state(self._external_id)
+            self.error_401(message=f"User ({user.email}) cannot find the data in database")
 
-    def get_password(self):
-        return self.internal_get_state(self._password)
-
-    def get_date_created(self):
-        return self.internal_get_state(self._date_created)
-
-    async def verify_password(self, password) -> bool:
-        hash_password = self.get_password()
-        return await self.auth_pass_service.verify_hash_password(
-            password=password, hash_password=hash_password
-        )
-
-
-    async def get_id_for_token_from_login_v1(self, user: UserLoginV1):
-        await self.insert_email(email=user.email)
-        if not await self.verify_password(password=user.password):
-            return None
-        return self.get_external_id()
-
+        except Exception as ex:
+            self.error_500("Unexpected error through login", ex=ex)
 
 
 class AuthUserRegisterService:
