@@ -149,17 +149,27 @@ class OpaqueAuthService:
             refresh_token: str | None,
             access_token: str | None
     ):
-        if access_token:
-            await self.redis_repo.delete_value(input_key=access_token)
-        if refresh_token:
-            await self.redis_repo.delete_value(input_key=refresh_token)
+        try:
+            if access_token:
+                await self.redis_repo.delete_value(input_key=access_token)
+            if refresh_token:
+                await self.redis_repo.delete_value(input_key=refresh_token)
 
-        await self.create_http_cookie("access", user_id)
-        await self.create_http_cookie("refresh", user_id)
+            await self.create_http_cookie("access", user_id)
+            await self.create_http_cookie("refresh", user_id)
+        except HTTPException:
+            raise
+        except Exception as ex:
+            self.error_401(ex=ex, message="Rotational Cookie creation failed")
 
-    async def login_user(self, user_id: str):
-        await self.create_http_cookie("access", user_id)
-        await self.create_http_cookie("refresh", user_id)
+    async def login_user(self, user_id):
+        try:
+            await self.create_http_cookie("access", user_id)
+            await self.create_http_cookie("refresh", user_id)
+        except HTTPException:
+            raise
+        except Exception as ex:
+            self.error_401(ex=ex, message="User unexpectedly failed to logged in")
 
     async def logout_user(self):
         access_token = self.get_raw_token_from_http_cookie("access")
