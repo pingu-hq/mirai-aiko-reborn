@@ -84,11 +84,10 @@ class OpaqueAuthService:
 
 
     @staticmethod
-    def _user_data_to_user_id(user_data:dict):
-        user_id = user_data.get("user_id", None)
-        if user_id:
-            return user_id
-        return None
+    def _user_data_to_user_id(user_data:dict | None):
+        if user_data is None:
+            return None
+        return user_data.get("user_id", None)
 
 
 
