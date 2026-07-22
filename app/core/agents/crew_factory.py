@@ -19,7 +19,7 @@ def base_llm():
     }
 
 
-def get_gpt_oss_llm(model: str, reasoning_effort: Literal["none", "low", "medium", "high"]) -> LLM:
+def get_gpt_oss_llm(model: str, reasoning_effort: Literal["none", "low", "medium", "high"] | None = None) -> LLM:
     key = f"{model}:{reasoning_effort}"
     with _cache_lock:
         if key not in _llm_cache:
@@ -41,8 +41,6 @@ def init_cache_and_crew_llms():
     global _llm_cache
     if _llm_cache is None:
         _llm_cache = TTLCache(maxsize=10, ttl=3600)
-        small_llm()
-        large_llm()
 
 def close_cache_and_crew_llms():
     global _llm_cache
@@ -69,6 +67,34 @@ class CrewFactory:
             verbose=True,
             **kwargs
         )
+
+    def create_agent_llm(
+            self,
+            model: Literal["small","big"],
+            reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
+            max_completion_tokens: int = 10_000,
+            temperature: float = .5,
+
+    ):
+        global _llm_cache
+
+        llm_params = {
+            "base_url":"https://api.groq.com/openai/v1",
+            "api_key":settings.groq_api_key.get_secret_value(),
+            "top_p":1,
+        }
+
+        cache_key = f"{model}:{reasoning_effort}:{max_completion_tokens}"
+        with _cache_lock:
+            if cache_key not in _llm_cache:
+                _llm_cache[cache_key] = LLM(
+                    model=model,
+                    reasoning_effort=reasoning_effort,
+                    max_completion_tokens=max_completion_tokens,
+                    temperature=temperature,
+                    **llm_params
+                )
+            return _llm_cache[cache_key]
 
     def run(self, inputs: dict[str, Any] | None = None,**kwargs) -> str:
         _crew_instance = self.build_crew(**kwargs)
