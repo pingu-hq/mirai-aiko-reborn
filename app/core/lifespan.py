@@ -36,6 +36,10 @@ from app.core.agents.crew_factory import (
 init_cache_and_crew_llms,
 close_cache_and_crew_llms
 )
+from app.services.agents.llm_clients import (
+init_groq_client,
+close_groq_client
+)
 
 
 async def safe_closure(name: str, close_func, is_sync: bool = True):
@@ -79,6 +83,7 @@ async def lifespan(app: FastAPI):
         safe_init("Mem0 Client", init_memory_client)
         safe_init("Yaml crewai config", init_yaml_loader)
         safe_init("Crewai LLM and Cache", init_cache_and_crew_llms)
+        safe_init("Async Groq client", init_groq_client)
         yield
 
     finally:
@@ -94,3 +99,4 @@ async def lifespan(app: FastAPI):
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
         await safe_closure("Mem0 Client", close_memory_client, is_sync=True)
         await safe_closure("Crewai LLM and Cache", close_cache_and_crew_llms, is_sync=True)
+        await safe_closure("Async Groq client", close_groq_client, is_sync=False)
