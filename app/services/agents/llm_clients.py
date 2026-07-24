@@ -18,3 +18,7 @@ async def close_groq_client():
     global _groq_client_async
     if _groq_client_async:
         await _groq_client_async.close()
+
+
+def get_groq_async_client() -> AsyncGroq:
+    return _groq_client_async
