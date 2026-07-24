@@ -136,6 +136,22 @@ class AsyncMemZeroMemoryService:
             return dumps(cleaned_data)
         return cleaned_data
 
+    async def raw_search_memory(
+            self, user_id: str,
+            query: str,
+            output: Literal["str", "raw"] = "str",
+            explain: bool = False
+    ) -> str | dict:
+
+        results = await self.memory_client.search(
+            query=query,
+            filters={"user_id": user_id},
+            explain=explain
+        )
+        if output == "str":
+            return dumps(results)
+        return results
+
     @staticmethod
     def cleaned_searched_result(search_results: dict[str, list[dict]]) -> list[dict]:
         cleaned_data = []
