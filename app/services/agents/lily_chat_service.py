@@ -47,8 +47,47 @@ You must output ONLY a valid JSON object matching this exact schema, with no mar
 Analyze the inputs carefully and return only the requested JSON."""
 
 
-class LilyChatRouterService:
+
+
+class LilyToolsService:
     def __init__(self):
+        self.mem = AsyncMemZeroMemoryService()
+        self.groq_client = get_groq_async_client()
+
+    async def web_search(self, user_input: str) -> str:
+        completion = await self.groq_client.chat.completions.create(
+            model="groq/compound-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_input
+                }
+            ],
+            temperature=1,
+            max_completion_tokens=8192,
+            top_p=1,
+            stop=None,
+            compound_custom={
+                "tools": {
+                    "enabled_tools": [
+                        "web_search",
+                        "code_interpreter",
+                        "visit_website"
+                    ]
+                }
+            }
+        )
+        web_results = completion.choices[0].message
+        app_logger.debug(f"WEB_RESULTS: \n{web_results}")
+        return web_results.content
+
+    async def add_memory(self, user_input: str, user_id: str):
+        await self.mem.add_memory(user_id=user_id, content=user_input)
+
+
+class LilyChatRouterService:
+    def __init__(self, tools: LilyToolsService):
+        self._tools = tools
         self.mem = AsyncMemZeroMemoryService()
         self.groq_client = get_groq_async_client()
 
