@@ -5,6 +5,11 @@ from app.services.data.memory_service import AsyncMemZeroMemoryService
 from jinja2 import Template
 from cachetools import TTLCache
 from asyncio import Lock as AsyncLock
+from app.core.agents.chat_prompt_loader import (
+ChatPromptLoader,
+PHASE_1,
+LILY_SYSTEM_PROMPT,
+LILY_USER_TEMPLATE)
 from app.core.logger import app_logger
 
 
@@ -17,34 +22,6 @@ def init_message_cache():
     global _messages_cache
     if _messages_cache is None:
         _messages_cache = TTLCache(maxsize=100, ttl=timedelta(hours=5).total_seconds())
-
-
-
-SYSTEM_PROMPT = """
-You are an intelligent intent router for an advanced AI assistant. Your task is to analyze the provided inputs—consisting of the user's current input, relevant memory context, and recent conversation history—and output a strict JSON object with two boolean decision flags.
-
-### INPUTS:
-- user_input: The raw text input provided by the user.
-- memory_context: Relevant background memories retrieved via search.
-- recent_conversation: The 5 most recent turns of dialogue between the user and the assistant.
-
-### OUTPUT FORMAT:
-You must output ONLY a valid JSON object matching this exact schema, with no markdown code blocks around it if required by your JSON mode, or standard JSON format:
-{
-  "search_web": true/false,
-  "add_memory": true/false
-}
-
-### DECISION GUIDELINES:
-1. "search_web": 
-   - Set to `true` if the user is asking for a translation, requesting real-time/current information, asking about external facts not guaranteed to be in static training data, or if the query drifts from or requires verification against the provided context.
-   - Set to `false` if the query can be fully answered using general knowledge or existing memory/conversation context.
-
-2. "add_memory": 
-   - Set to `true` if the `user_input` contains a distinct personal fact, preference, detail about the user's life, or a direct instruction that is valuable to store for future interactions.
-   - Set to `false` if the input is a general question, a casual remark, a command, or already well-documented.
-
-Analyze the inputs carefully and return only the requested JSON."""
 
 
 
@@ -105,12 +82,9 @@ class LilyChatRouterService:
     ) -> str:
         global _user_template
         if _user_template is None:
+            user_prompt_template = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_USER_TEMPLATE)
             _user_template = Template(
-                source="""### USER:
-                - USER_INPUT: {{user_input}}
-                - MEMORY_CONTEXT: {{memory_context}}
-                - RECENT_CONVERSATION: {{recent_conversation}}
-                """, enable_async=True
+                source=user_prompt_template, enable_async=True
             )
         return await _user_template.render_async(
             user_input=user_input,
@@ -178,6 +152,15 @@ class LilyChatRouterService:
             memory_context=memory_context,
             recent_conversation=recent_conversation
         )
+        app_logger.debug(f"Finalized user content: {user_content}")
+        system_prompt = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_SYSTEM_PROMPT)
+        response = await self.gpt_oss_120b(
+            system_content=system_prompt,
+            user_content=user_content
+        )
+        app_logger.debug(f"Chat completion response: {response}")
+        return response
+
         app_logger.debug(f"Finalized user content: {user_content}")
 
         response = await self.gpt_oss_120b(
