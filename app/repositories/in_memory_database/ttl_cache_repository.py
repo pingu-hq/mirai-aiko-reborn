@@ -1,78 +1,49 @@
 from cachetools import TTLCache
 from datetime import timedelta
-from abc import ABC, abstractmethod
+from asyncio import Lock
 
 
-opaque_access_cache = TTLCache(
-    maxsize=100,
-    ttl=timedelta(minutes=5).total_seconds(),
-)
-opaque_refresh_cache = TTLCache(
-    maxsize=100,
-    ttl=timedelta(days=15).total_seconds(),
-)
+class ChatMessageCacheRepository:
+    _ttl_cache: TTLCache | None = None
+    _lock: Lock | None = None
 
-class InMemoryTTLCacheBase(ABC):
+    @classmethod
+    def init_chat_messages_cache(cls):
+        if cls._ttl_cache is None:
+            cls._ttl_cache = TTLCache(
+                maxsize=1000,
+                ttl=timedelta(hours=10).total_seconds()
+            )
 
-    @abstractmethod
-    def get(self, user_id: str):
-        pass
+    @classmethod
+    def close_chat_messages_cache(cls):
+        if cls._ttl_cache:
+            cls._ttl_cache.clear()
 
-    @abstractmethod
-    def set(self, user_id: str, value):
-        pass
+    @classmethod
+    def get_master_lock(cls) -> Lock:
+        if cls._lock is None:
+            cls._lock = Lock()
+        return cls._lock
 
-    @abstractmethod
-    def remove(self, user_id: str):
-        pass
-
-
-
-
-class OpaqueAccessInMemoryRepository(InMemoryTTLCacheBase):
 
     @property
-    def opaque_access_cache(self) -> TTLCache:
-        return opaque_access_cache
+    def message_cache(self) -> TTLCache:
+        return self._ttl_cache
 
-    def get(self, user_id: str):
-        if user_id in self.opaque_access_cache:
-            return self.opaque_access_cache[user_id]
-        return None
 
-    def set(self, user_id: str, value):
-        try:
-            self.opaque_access_cache[user_id] = value
-            return True
-        except Exception as e:
-            return False
+    async def _add_value(self, user_id: str, value):
+        async with self.get_master_lock():
+            self.message_cache[user_id] = value
 
-    def remove(self, user_id: str):
-        if user_id in self.opaque_access_cache:
-            self.opaque_access_cache.pop(user_id, None)
-            return True
-        return False
+    async def _get_value(self, user_id: str):
+        if user_id in self.message_cache:
+            return self.message_cache[user_id]
 
-class OpaqueRefreshInMemoryRepository(InMemoryTTLCacheBase):
+        async with self.get_master_lock():
+            new_value = []
+            self.message_cache[user_id] = new_value
+            return new_value
 
-    @property
-    def opaque_refresh_cache(self) -> TTLCache:
-        return opaque_refresh_cache
 
-    def get(self, user_id: str):
-        if user_id in self.opaque_refresh_cache:
-            return self.opaque_refresh_cache[user_id]
-        return None
 
-    def set(self, user_id: str, value):
-        try:
-            self.opaque_refresh_cache[user_id] = value
-            return True
-        except Exception as e:
-            return False
-
-    def remove(self, user_id: str):
-        if user_id in self.opaque_refresh_cache:
-            self.opaque_refresh_cache.pop(user_id, None)
-            return True
-        return False
