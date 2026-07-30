@@ -45,5 +45,10 @@ class ChatMessageCacheRepository:
             self.message_cache[user_id] = new_value
             return new_value
 
+    async def append_messages(self, user_id: str, message):
+        async with self.get_master_lock():
+            current_messages = self.message_cache.setdefault(user_id, [])
+            current_messages.append(message)
+
 
 
