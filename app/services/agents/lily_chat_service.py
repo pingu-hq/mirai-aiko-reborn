@@ -110,6 +110,9 @@ class LilyToolsService:
             output="raw"
         )
 
+    async def cleaned_search_memory_context(self, user_id: str, user_input: str) -> list[dict]:
+        return await self.mem.search_memory(user_id=user_id, content=user_input, output="raw", explain=True)
+
 class LilyChatRouterService:
     def __init__(self, tools: LilyToolsService):
         self._tools = tools
@@ -164,7 +167,7 @@ class LilyChatRouterService:
             user_input: str,
             recent_conversation: list,
         ):
-            memory_context = await self._tools.search_memory_context(
+            memory_context = await self._tools.cleaned_search_memory_context(
                 user_id=user_id,
                 user_input=user_input
             )
