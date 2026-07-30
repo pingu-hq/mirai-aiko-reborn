@@ -129,8 +129,8 @@ class AsyncMemZeroMemoryService:
     async def add_memory(self, user_id: str, content: str):
         await self.memory_client.add(user_id=user_id, messages=content)
 
-    async def search_memory(self, user_id: str, content: str, output: Literal["str", "raw"] = "str"):
-        results = await self.memory_client.search(query=content, filters={"user_id": user_id})
+    async def search_memory(self, user_id: str, content: str, output: Literal["str", "raw"] = "str", **kwargs):
+        results = await self.memory_client.search(query=content, filters={"user_id": user_id}, **kwargs)
         cleaned_data = self.cleaned_searched_result(search_results=results)
         if output == "str":
             return dumps(cleaned_data)
@@ -154,19 +154,16 @@ class AsyncMemZeroMemoryService:
 
     @staticmethod
     def cleaned_searched_result(search_results: dict[str, list[dict]]) -> list[dict]:
-        cleaned_data = []
-        for sr in search_results["results"]:
+        allowed_fields = {
+            "memory",
+            "metadata",
+            "score",
+            "score_details",
+            "created_at",
+            "updated_at",
+        }
 
-            timestamps = {"created_at": sr["created_at"]}
-
-            if sr["created_at"] != sr["updated_at"]:
-                timestamps["updated_at"] = sr["updated_at"]
-
-            result_data = {
-                "memory": sr['memory'],
-                "metadata": sr['metadata'],
-                "score": sr['score'],
-                **timestamps
-            }
-            cleaned_data.append(result_data)
-        return cleaned_data
+        return [
+            {key: value for key, value in sr.items() if key in allowed_fields}
+            for sr in search_results.get("results", [])
+        ]
