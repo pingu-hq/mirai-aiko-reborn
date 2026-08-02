@@ -43,11 +43,18 @@ class LLMLoader:
         kwargs.setdefault(
             "max_completion_tokens", 8_000)
         global _LLM_HOLDER
+        if _LLM_HOLDER is not None and key in _LLM_HOLDER:
+            return _LLM_HOLDER[key]
+
         with _LLM_LOCK:
+            if _LLM_HOLDER is None:
+                init_crewai_llm_cache()
+
+            assert _LLM_HOLDER is not None
+
             if key not in _LLM_HOLDER:
-                _LLM_HOLDER[key] = LLM(
-                    **kwargs
-                )
+                _LLM_HOLDER[key] = LLM(**kwargs)
+
             return _LLM_HOLDER[key]
 
     def get_groq_llm(
@@ -57,10 +64,15 @@ class LLMLoader:
             max_completion_tokens=10_000,
             **kwargs
     ):
+        if model == "small":
+            gpt_oss_model = "groq/openai/gpt-oss-20b"
+        else:
+            gpt_oss_model = "groq/openai/gpt-oss-120b"
+
         cache_key = f"{model}:{reasoning_effort}:{max_completion_tokens}"
         return self.llm_builder(
             key=cache_key,
-            model=model,
+            model=gpt_oss_model,
             reasoning_effort=reasoning_effort,
             max_completion_tokens=max_completion_tokens,
             **self.groq_config(),
