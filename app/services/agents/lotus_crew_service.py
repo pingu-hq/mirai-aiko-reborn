@@ -1,45 +1,69 @@
 from typing import Any
-from app.core.agents.crew_factory import CrewFactory, small_llm, large_llm
+from crewai import Crew, Process, Agent
+from crewai.crews.crew_output import CrewOutput
+from app.core.agents.agent_loader import SampleAgentLoader
+from app.core.agents.llm_loader import LLMLoader
+from pydantic import BaseModel, Field
+from app.core.logger import app_logger
 
 
 
+
+class LotusRoutingResult(BaseModel):
+    assumptions: str = Field(description="The core intent and context assumptions")
+    detected_language: str = Field(description="The language and any slang detected")
+    needs_translation: bool = Field(description="True if translation is needed")
+    needs_web_search: bool = Field(description="True if real-time web search is required")
+    needs_internal_knowledge: bool = Field(description="True if internal lookup is needed")
+    needs_memory_update: bool = Field(description="True if mem0 needs updating")
 
 
 
 class LotusCrewService:
     def __init__(self):
-        self.factory = CrewFactory()
-        self.gpt_oss_20 = small_llm()
-        self.gpt_oss_120 = large_llm()
+        self.al = SampleAgentLoader()
+        self.llm_loader = LLMLoader()
+        # self.groq_llm = self.llm_loader.get_groq_llm("big", "low")
+        # self.al.create_agent(
+        #     agent_name="lotus_analyzer",
+        #     llm=self.groq_llm)
+        # self.al.create_task(
+        #     task_name="filter_and_clean_task",
+        #     agent_assigned="lotus_analyzer")
+        # self.al.create_task(
+        #     task_name="assumption_and_routing_task",
+        #     agent_assigned="lotus_analyzer",
+        #     output_pydantic=LotusRoutingResult)
 
-    def initialize_agents(self):
-        try:
-            self.factory.agent_loader.create_agent(agent_name="researcher", llm=self.gpt_oss_20)
-            self.factory.agent_loader.create_agent(agent_name="writer", llm=self.gpt_oss_120)
-            return self
-        except Exception as e:
-            raise e
 
-    def initialize_tasks(self):
-        try:
-            self.factory.agent_loader.create_task(task_name="research_task", agent_assigned="researcher")
-            self.factory.agent_loader.create_task(task_name="writing_task", agent_assigned="writer")
-            return self
-        except Exception as e:
-            raise e
 
-    def run(self, inputs: dict[str, Any], **kwargs):
-        try:
-            self.initialize_agents()
-            self.initialize_tasks()
-            return self.factory.run(inputs=inputs, **kwargs)
-        except Exception as e:
-            raise e
+    def analyzer_agent(self):
+        self.al.agents_yaml[""]
+        return Agent(
 
-    async def run_async(self, inputs: dict[str, Any], **kwargs):
-        try:
-            self.initialize_agents()
-            self.initialize_tasks()
-            return await self.factory.run_async(inputs=inputs, **kwargs)
-        except Exception as e:
-            raise e
+        )
+
+    def get_crew(self, **kwargs) -> Crew:
+        kwargs.setdefault("verbose", True)
+        kwargs.setdefault("process", Process.sequential)
+        kwargs.setdefault("agents", self.al.all_agents)
+        kwargs.setdefault("tasks", self.al.all_tasks)
+        return Crew(**kwargs)
+
+    async def run(self, user_input: str, memory_context: Any, **kwargs):
+        crew = self.get_crew(**kwargs)
+        inputs = {"user_input": user_input, "memory_context": memory_context}
+        result: CrewOutput = await crew.kickoff_async(inputs=inputs)
+        return result.pydantic
+
+
+
+async def lotus_async_execution(user_input: str, memory_context: Any):
+    if memory_context is None:
+        memory_context = "No previous memory context available."
+    app_logger.debug(f"Starting Lotus Crew with Input: {user_input} | Context: {memory_context}")
+    lcs = LotusCrewService()
+    crew_created = lcs.get_crew()
+    result = await crew_created.kickoff_async({"user_input": user_input, "memory_context": memory_context})
+    app_logger.debug(f"Type{type(result)} // Results content: {result.raw}")
+    return result
