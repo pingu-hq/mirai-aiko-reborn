@@ -8,6 +8,8 @@ from yaml import safe_load as yaml_load
 FILES_AVAIL = (
     "agents.yaml",
     "tasks.yaml",
+    "sample_agents.yaml",
+    "sample_tasks.yaml"
 )
 
 @lru_cache(maxsize=len(FILES_AVAIL))
@@ -56,32 +58,42 @@ class AgentLoader:
         return {"agents": self._agents, "tasks": self._tasks}
 
 
-class AgentLoaderVersion1:
+class SampleAgentLoader:
     def __init__(self):
         self._agents: list[Agent] = []
         self._tasks: list[Task] = []
+        self.agents_dict: dict[str, Agent] = {}
 
     @property
-    def agents_yaml(self):
-        return load_yaml(filename="agents.yaml")
+    def all_agents(self) -> list[Agent]:
+        return self._agents
 
     @property
-    def tasks_yaml(self):
-        return load_yaml(filename="tasks.yaml")
+    def all_tasks(self) -> list[Task]:
+        return self._tasks
+
+    @property
+    def agents_yaml(self) -> dict:
+        return load_yaml(filename="sample_agents.yaml")
+
+    @property
+    def tasks_yaml(self) -> dict:
+        return load_yaml(filename="sample_tasks.yaml")
 
 
     def create_agent(self, agent_name: str, **overrides) -> Agent:
         config_file = self.agents_yaml[agent_name]
         new_agent = Agent(**config_file, **overrides)
+        self.agents_dict[agent_name] = new_agent
         self._agents.append(new_agent)
         return new_agent
 
-    def create_task(self, task_name: str, agent_assigned: Agent, **overrides) -> Task:
+    def create_task(self, task_name: str, agent_assigned: str, **overrides) -> Task:
         config_file = self.tasks_yaml[task_name]
-        new_task = Task(**config_file, agent=agent_assigned, **overrides)
+        agent = self.agents_dict[agent_assigned]
+        new_task = Task(**config_file, agent=agent, **overrides)
         self._tasks.append(new_task)
         return new_task
 
     def agents_and_tasks_as_params(self) -> dict[str, list[Agent] | list[Task]]:
         return {"agents": self._agents, "tasks": self._tasks}
-
