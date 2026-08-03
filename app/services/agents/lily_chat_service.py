@@ -126,7 +126,7 @@ class LilyChatRouterService:
     @staticmethod
     async def finalize_user_content(
             user_input: str,
-            memory_context: dict,
+            memory_context: list[dict],
             recent_conversation: list,
     ) -> str:
         global _user_template
