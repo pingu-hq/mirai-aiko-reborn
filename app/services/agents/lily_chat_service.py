@@ -1,5 +1,7 @@
+import json
 from datetime import timedelta
 from typing import Literal, Any
+from pydantic import BaseModel, ValidationError
 from app.services.agents.llm_clients import get_groq_async_client
 from app.services.data.memory_service import AsyncMemZeroMemoryService
 from jinja2 import Template
@@ -24,6 +26,13 @@ def init_message_cache():
         _messages_cache = TTLCache(maxsize=100, ttl=timedelta(hours=5).total_seconds())
 
 
+
+
+class LilyOutput(BaseModel):
+    use_web_search_tool: bool = False
+    web_search_query: str | None = None
+    learn_memory: bool = False
+    memory_context_to_add: str | None = None
 
 
 class LilyToolsService:
@@ -160,28 +169,48 @@ class LilyChatRouterService:
     def get_messages_cache(self, user_id: str):
         return list(self.ttl_cache.get(user_id, []))
 
+    async def execute_tasks_to_string_output(
+            self,
+            user_id: str,
+            user_input: str,
+            recent_conversation: list,
+    ):
+        memory_context = await self._tools.cleaned_search_memory_context(
+            user_id=user_id,
+            user_input=user_input
+        )
+        user_content = await self.finalize_user_content(
+            user_input=user_input,
+            memory_context=memory_context,
+            recent_conversation=recent_conversation
+        )
+        app_logger.debug(f"Finalized user content: {user_content}")
+        system_prompt = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_SYSTEM_PROMPT)
+
+        response = await self._tools.gpt_oss_120b(
+            system_content=system_prompt,
+            user_content=user_content
+        )
+        app_logger.debug(f"Chat completion response: {response}")
+        return response
+
+    @staticmethod
+    def validated_output(data: str) -> LilyOutput:
+        try:
+            return LilyOutput.model_validate(json.loads(data))
+        except ValidationError:
+            return LilyOutput()
+
 
     async def execute_tasks(
             self,
             user_id: str,
             user_input: str,
             recent_conversation: list,
-        ):
-            memory_context = await self._tools.cleaned_search_memory_context(
+        ) -> LilyOutput:
+            string_response = await self.execute_tasks_to_string_output(
                 user_id=user_id,
-                user_input=user_input
-            )
-            user_content = await self.finalize_user_content(
                 user_input=user_input,
-                memory_context=memory_context,
                 recent_conversation=recent_conversation
             )
-            app_logger.debug(f"Finalized user content: {user_content}")
-            system_prompt = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_SYSTEM_PROMPT)
-
-            response = await self._tools.gpt_oss_120b(
-                system_content=system_prompt,
-                user_content=user_content
-            )
-            app_logger.debug(f"Chat completion response: {response}")
-            return response
+            return self.validated_output(string_response)
