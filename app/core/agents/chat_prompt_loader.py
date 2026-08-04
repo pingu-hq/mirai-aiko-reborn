@@ -1,5 +1,7 @@
 from pathlib import Path
 from functools import lru_cache
+import tomllib
+from typing import Any, Literal
 from yaml import safe_load as yaml_load
 
 
@@ -34,3 +36,40 @@ class ChatPromptLoader:
         return config_content
 
 
+
+
+class ConfigNotInitializedError(RuntimeError):
+    def __init__(self, message="Config TOML file must be initialized before use!"):
+        super().__init__(message)
+
+
+
+class ConfigLoader:
+    _config_toml = None
+
+    @classmethod
+    def load_toml_config(cls):
+        if cls._config_toml is None:
+            raise ConfigNotInitializedError()
+        return cls._config_toml
+
+    @classmethod
+    def init_config_toml_file(cls):
+        if cls._config_toml is None:
+            config_path = Path(__file__).resolve().parent / "config" / "chat_prompts.toml"
+            with open(config_path, "rb") as f:
+                cls._config_toml = tomllib.load(f)
+        return cls._config_toml
+
+
+class LilyLoadConfig:
+
+    def __init__(self):
+        self._config = ConfigLoader.load_toml_config()
+
+    @property
+    def config(self) -> dict[str, Any]:
+        return self._config["lily"]
+
+    def first_phase(self, prompt: Literal["system_prompt", "user_prompt"]) -> dict[str, Any]:
+        return self.config["first-phase"][prompt]
