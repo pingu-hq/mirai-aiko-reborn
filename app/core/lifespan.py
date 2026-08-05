@@ -27,10 +27,6 @@ init_milvus_character_knowledge,
 close_milvus_message_store,
 close_milvus_character_knowledge
 )
-from app.services.data.memory_service import (
-init_memory_client,
-close_memory_client
-)
 from app.core.agents.agent_loader import init_yaml_loader
 from app.core.agents.crew_factory import (
 init_cache_and_crew_llms,
@@ -81,7 +77,6 @@ async def lifespan(app: FastAPI):
         safe_init("Azure AI Project", init_azure_ai_project)
         safe_init("Azure Client", init_azure_client)
         safe_init("Groq Client", init_groq_client)
-        safe_init("Mem0 Client", init_memory_client)
         safe_init("Yaml crewai config", init_yaml_loader)
         safe_init("Crewai LLM and Cache", init_cache_and_crew_llms)
         safe_init("Async Groq client", init_groq_client)
@@ -99,6 +94,5 @@ async def lifespan(app: FastAPI):
         await safe_closure("Azure AI Project", close_azure_ai_project, is_sync=True)
         await safe_closure("Azure Client", close_azure_openai_client, is_sync=True)
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
-        await safe_closure("Mem0 Client", close_memory_client, is_sync=True)
         await safe_closure("Crewai LLM and Cache", close_cache_and_crew_llms, is_sync=True)
         await safe_closure("Async Groq client", close_groq_client, is_sync=False)
