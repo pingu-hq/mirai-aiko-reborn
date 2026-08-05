@@ -37,6 +37,7 @@ init_groq_client,
 close_groq_client
 )
 from app.services.agents.lily_chat_service import init_message_cache
+from app.repositories.in_memory_database.ttl_cache_repository import ChatMessageCacheRepository
 
 
 async def safe_closure(name: str, close_func, is_sync: bool = True):
@@ -81,6 +82,7 @@ async def lifespan(app: FastAPI):
         safe_init("Crewai LLM and Cache", init_cache_and_crew_llms)
         safe_init("Async Groq client", init_groq_client)
         safe_init("Lily message cache", init_message_cache)
+        safe_init("Chat Message cache", ChatMessageCacheRepository.init_chat_messages_cache)
         yield
 
     finally:
@@ -96,3 +98,4 @@ async def lifespan(app: FastAPI):
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
         await safe_closure("Crewai LLM and Cache", close_cache_and_crew_llms, is_sync=True)
         await safe_closure("Async Groq client", close_groq_client, is_sync=False)
+        await safe_closure("Chat Message cache", ChatMessageCacheRepository.close_chat_messages_cache, is_sync=True)
