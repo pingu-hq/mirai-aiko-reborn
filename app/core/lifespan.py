@@ -32,6 +32,7 @@ from app.core.agents.crew_factory import (
 init_cache_and_crew_llms,
 close_cache_and_crew_llms
 )
+from app.core.agents.llm_loader import LLMLoader
 from app.services.agents.llm_clients import (
 init_groq_client,
 close_groq_client
@@ -78,6 +79,7 @@ async def lifespan(app: FastAPI):
         safe_init("Azure AI Project", init_azure_ai_project)
         safe_init("Azure Client", init_azure_client)
         safe_init("Groq Client", init_groq_client)
+        safe_init("CrewAI LLM client", LLMLoader.init_crewai_llm_cache)
         safe_init("Yaml crewai config", init_yaml_loader)
         safe_init("Crewai LLM and Cache", init_cache_and_crew_llms)
         safe_init("Async Groq client", init_groq_client)
@@ -96,6 +98,7 @@ async def lifespan(app: FastAPI):
         await safe_closure("Azure AI Project", close_azure_ai_project, is_sync=True)
         await safe_closure("Azure Client", close_azure_openai_client, is_sync=True)
         await safe_closure("Groq Client", close_groq_client, is_sync=False)
+        await safe_closure("CrewAI LLM client", LLMLoader.close_crewai_llm_cache, is_sync=True)
         await safe_closure("Crewai LLM and Cache", close_cache_and_crew_llms, is_sync=True)
         await safe_closure("Async Groq client", close_groq_client, is_sync=False)
         await safe_closure("Chat Message cache", ChatMessageCacheRepository.close_chat_messages_cache, is_sync=True)

@@ -7,55 +7,39 @@ from threading import Lock
 
 
 
-_LLM_HOLDER: TTLCache | None = None
-_LLM_LOCK = Lock()
-
-
-
-def init_crewai_llm_cache():
-    global _LLM_HOLDER
-    if _LLM_HOLDER is None:
-        _LLM_HOLDER = TTLCache(maxsize=15, ttl=3600)
-
-def close_crewai_llm_cache():
-    global _LLM_HOLDER
-    if _LLM_HOLDER:
-        _LLM_HOLDER.expire()
-        _LLM_HOLDER.clear()
-
-
 class LLMLoader:
-    def __init__(self):
-        self.api_key = settings.groq_api_key.get_secret_value()
+    _llm_holder: TTLCache | None = None
+    _llm_lock = Lock()
 
+    @property
     def groq_config(self):
         return {
             "base_url": "https://api.groq.com/openai/v1",
-            "api_key": self.api_key,
+            "api_key": settings.groq_api_key.get_secret_value(),
         }
 
-    @staticmethod
-    def llm_builder(key: str, **kwargs) -> LLM:
+    @classmethod
+    def llm_builder(cls, key: str, **kwargs) -> LLM:
         kwargs.setdefault(
             "top_p", 1)
         kwargs.setdefault(
             "temperature", 0.5)
         kwargs.setdefault(
             "max_completion_tokens", 8_000)
-        global _LLM_HOLDER
-        if _LLM_HOLDER is not None and key in _LLM_HOLDER:
-            return _LLM_HOLDER[key]
 
-        with _LLM_LOCK:
-            if _LLM_HOLDER is None:
-                init_crewai_llm_cache()
+        if cls._llm_holder is not None and key in cls._llm_holder:
+            return cls._llm_holder[key]
 
-            assert _LLM_HOLDER is not None
+        with cls._llm_lock:
+            if cls._llm_holder is None:
+                cls.init_crewai_llm_cache()
 
-            if key not in _LLM_HOLDER:
-                _LLM_HOLDER[key] = LLM(**kwargs)
+            assert cls._llm_holder is not None
 
-            return _LLM_HOLDER[key]
+            if key not in cls._llm_holder:
+                cls._llm_holder[key] = LLM(**kwargs)
+            return cls._llm_holder[key]
+
 
     def get_groq_llm(
             self,
@@ -75,6 +59,18 @@ class LLMLoader:
             model=gpt_oss_model,
             reasoning_effort=reasoning_effort,
             max_completion_tokens=max_completion_tokens,
-            **self.groq_config(),
+            **self.groq_config,
             **kwargs
         )
+
+    @classmethod
+    def init_crewai_llm_cache(cls):
+        if cls._llm_holder is None:
+            cls._llm_holder = TTLCache(maxsize=15, ttl=3600)
+
+    @classmethod
+    def close_crewai_llm_cache(cls):
+        if cls._llm_holder:
+            cls._llm_holder.expire()
+            cls._llm_holder.clear()
+            cls._llm_holder = None
