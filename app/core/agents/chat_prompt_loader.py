@@ -71,5 +71,5 @@ class LilyLoadConfig:
     def config(self) -> dict[str, Any]:
         return self._config["lily"]
 
-    def first_phase(self, prompt: Literal["system_prompt", "user_prompt"]) -> dict[str, Any]:
+    def first_phase(self, prompt: Literal["system_prompt", "user_prompt"]) -> str:
         return self.config["first-phase"][prompt]
