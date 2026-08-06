@@ -7,15 +7,11 @@ from app.services.data.memory_service import AsyncMemZeroMemoryService
 from jinja2 import Template
 from cachetools import TTLCache
 from asyncio import Lock as AsyncLock
-from app.core.agents.chat_prompt_loader import (
-ChatPromptLoader,
-PHASE_1,
-LILY_SYSTEM_PROMPT,
-LILY_USER_TEMPLATE)
+from app.core.agents.chat_prompt_loader import LilyLoadConfig
 from app.core.logger import app_logger
 
 
-_user_template: Template | None = None
+
 _messages_cache: TTLCache | None = None
 _async_lock = AsyncLock()
 
@@ -123,6 +119,10 @@ class LilyToolsService:
         return await self.mem.search_memory(user_id=user_id, content=user_input, output="raw", explain=True)
 
 class LilyChatRouterService:
+    _lily_load_config = LilyLoadConfig()
+    _user_prompt_template: Template | None = None
+
+
     def __init__(self, tools: LilyToolsService):
         self._tools = tools
 
@@ -131,20 +131,22 @@ class LilyChatRouterService:
         return _messages_cache
 
 
+    @classmethod
+    def user_prompt_template(cls) -> Template:
+        if cls._user_prompt_template is None:
+            loaded_template = cls._lily_load_config.first_phase("user_prompt")
+            cls._user_prompt_template = Template(source=loaded_template, enable_async=True)
+        return cls._user_prompt_template
 
-    @staticmethod
+
     async def finalize_user_content(
+            self,
             user_input: str,
             memory_context: list[dict],
             recent_conversation: list,
     ) -> str:
-        global _user_template
-        if _user_template is None:
-            user_prompt_template = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_USER_TEMPLATE)
-            _user_template = Template(
-                source=user_prompt_template, enable_async=True
-            )
-        return await _user_template.render_async(
+        user_template = self.user_prompt_template()
+        return await user_template.render_async(
             user_input=user_input,
             memory_context=memory_context,
             recent_conversation=recent_conversation
@@ -185,7 +187,7 @@ class LilyChatRouterService:
             recent_conversation=recent_conversation
         )
         app_logger.debug(f"Finalized user content: {user_content}")
-        system_prompt = ChatPromptLoader.get_prompts(phase=PHASE_1, prompt=LILY_SYSTEM_PROMPT)
+        system_prompt = self._lily_load_config.first_phase("system_prompt")
 
         response = await self._tools.gpt_oss_120b(
             system_content=system_prompt,
