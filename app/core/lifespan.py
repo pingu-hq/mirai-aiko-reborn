@@ -37,6 +37,7 @@ from app.services.agents.llm_clients import (
 init_groq_client,
 close_groq_client
 )
+from app.core.agents.chat_prompt_loader import ConfigLoader
 from app.services.agents.lily_chat_service import init_message_cache
 from app.repositories.in_memory_database.ttl_cache_repository import ChatMessageCacheRepository
 
@@ -85,6 +86,7 @@ async def lifespan(app: FastAPI):
         safe_init("Async Groq client", init_groq_client)
         safe_init("Lily message cache", init_message_cache)
         safe_init("Chat Message cache", ChatMessageCacheRepository.init_chat_messages_cache)
+        safe_init("Config toml chat prompts", ConfigLoader.init_config_toml_file)
         yield
 
     finally:
