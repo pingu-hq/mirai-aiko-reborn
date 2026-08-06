@@ -4,6 +4,7 @@ from typing import Literal, Any
 from pydantic import BaseModel, ValidationError
 from app.services.agents.llm_clients import get_groq_async_client
 from app.services.data.memory_service import AsyncMemZeroMemoryService
+from functools import lru_cache
 from jinja2 import Template
 from cachetools import TTLCache
 from asyncio import Lock as AsyncLock
@@ -119,33 +120,31 @@ class LilyToolsService:
         return await self.mem.search_memory(user_id=user_id, content=user_input, output="raw", explain=True)
 
 class LilyChatRouterService:
-    _lily_load_config = LilyLoadConfig()
-    _user_prompt_template: Template | None = None
-
-
     def __init__(self, tools: LilyToolsService):
         self._tools = tools
+        self._lily_load_config = LilyLoadConfig()
 
     @property
     def ttl_cache(self) -> TTLCache:
         return _messages_cache
 
-
     @classmethod
-    def user_prompt_template(cls) -> Template:
-        if cls._user_prompt_template is None:
-            loaded_template = cls._lily_load_config.first_phase("user_prompt")
-            cls._user_prompt_template = Template(source=loaded_template, enable_async=True)
-        return cls._user_prompt_template
+    @lru_cache(maxsize=1)
+    def _get_first_phase_user_template(cls) -> Template:
+        _lily_load_config = LilyLoadConfig()
+        user_template = _lily_load_config.first_phase("user_prompt")
+        return Template(source=user_template, enable_async=True)
 
+    def get_first_phase_system_prompt(self) -> str:
+        return self._lily_load_config.first_phase("system_prompt")
 
-    async def finalize_user_content(
+    async def get_first_phase_user_prompt(
             self,
             user_input: str,
             memory_context: list[dict],
             recent_conversation: list,
     ) -> str:
-        user_template = self.user_prompt_template()
+        user_template = self._get_first_phase_user_template()
         return await user_template.render_async(
             user_input=user_input,
             memory_context=memory_context,
@@ -181,13 +180,13 @@ class LilyChatRouterService:
             user_id=user_id,
             user_input=user_input
         )
-        user_content = await self.finalize_user_content(
+        user_content = await self.get_first_phase_user_prompt(
             user_input=user_input,
             memory_context=memory_context,
             recent_conversation=recent_conversation
         )
         app_logger.debug(f"Finalized user content: {user_content}")
-        system_prompt = self._lily_load_config.first_phase("system_prompt")
+        system_prompt = self.get_first_phase_system_prompt()
 
         response = await self._tools.gpt_oss_120b(
             system_content=system_prompt,
