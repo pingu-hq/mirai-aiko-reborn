@@ -31,3 +31,8 @@ dependencies = [
 override-dependencies = [
     "posthog>=7.14.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.2",
+]
