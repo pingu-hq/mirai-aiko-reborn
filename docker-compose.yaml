@@ -1,15 +1,40 @@
 services:
-  fastapi-service-miako:
+  mirai-aiko-ai-backend:
     build: .
     image: mirai-aiko-reborn
-    container_name: backend-fastapi
+    container_name: mirai-aiko-ai-backend-cont
     ports:
-      - "127.0.0.1:8000:8000"
-    env_file:
-      - secrets/.env
+      - "127.0.0.1:8000:8000" # Only the backend is exposed to the outside!
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - REDIS_URI=redis://redis:6379/0
+    depends_on:
+      - mongo
+      - redis
     networks:
-      - miako-network
+      - internal_net
+
+  mongo:
+    image: mongo:latest
+    # NO ports exposed here! It's only accessible inside the Docker network.
+    # NO authentication environment variables, just a simple setup!
+    # volumes:
+    #   - mongo_data:/data/db
+    networks:
+      - internal_net
+
+  redis:
+    image: redis:alpine
+    # NO ports exposed here either!
+    # volumes:
+    #   - redis_data:/data
+    networks:
+      - internal_net
+
+# volumes:
+#   mongo_data:
+#   redis_data:
 
 networks:
-  full-network-miako:
+  internal_net:
     driver: bridge
