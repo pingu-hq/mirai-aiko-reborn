@@ -85,7 +85,7 @@ def get_user_login_service(
 ) -> UserLoginService:
     return UserLoginService(http_cookie_service=http_cookie_service)
 
-UserLoginServiceDeps: Annotated[UserLoginService, Depends(get_user_login_service)]
+type UserLoginServiceDeps = Annotated[UserLoginService, Depends(get_user_login_service)]
 
 
 
@@ -126,3 +126,8 @@ class UserRegisterService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists",
             )
+
+def get_user_register_service() -> UserRegisterService:
+    return UserRegisterService()
+
+type UserRegisterServiceDeps = Annotated[UserRegisterService, Depends(get_user_register_service)]
