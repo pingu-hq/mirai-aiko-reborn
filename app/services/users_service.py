@@ -95,15 +95,20 @@ UserLoginServiceDeps: Annotated[UserLoginService, Depends(get_user_login_service
 class UserRegisterService:
     def __init__(
         self,
-        user_schema: UserRegisterSchema,
         user_repo: UsersRepository | None = None,
         password_hasher: PasswordHasherService | None = None,
     ):
         self.user_repo = user_repo or UsersRepository()
-        self.user_schema = user_schema
+        self.user_schema: UserRegisterSchema | None = None
         self.password_hasher = password_hasher or PasswordHasherService()
 
+    def insert_user_schema(self, user_schema: UserRegisterSchema):
+        self.user_schema = user_schema
+
     async def register_user(self):
+        if not self.user_schema:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
+        
         users_collection: AsyncCollection = await self.user_repo.get_users_collection()
         hashed_password = await self.password_hasher.hash_password(
             password=self.user_schema.password
