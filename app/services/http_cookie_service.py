@@ -163,5 +163,8 @@ class HttpCookieAuthService:
         self.response.delete_cookie("refresh")
         return True
 
+    async def is_user_still_logged_in(self) -> bool:
+        return bool(await self._get_sub_from_access_token() or await self._get_sub_from_refresh_token())
+
 def get_http_cookie_auth_service(request: Request, response: Response) -> HttpCookieAuthService:
     return HttpCookieAuthService(request, response)
