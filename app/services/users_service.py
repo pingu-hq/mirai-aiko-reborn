@@ -80,13 +80,6 @@ class UserLoginService:
         return True
 
 
-def get_user_login_service(
-    http_cookie_service: Annotated[HttpCookieAuthService, Depends(get_http_cookie_auth_service)]
-) -> UserLoginService:
-    return UserLoginService(http_cookie_service=http_cookie_service)
-
-type UserLoginServiceDeps = Annotated[UserLoginService, Depends(get_user_login_service)]
-
 
 
 
@@ -127,10 +120,6 @@ class UserRegisterService:
                 detail="User already exists",
             )
 
-def get_user_register_service() -> UserRegisterService:
-    return UserRegisterService()
-
-type UserRegisterServiceDeps = Annotated[UserRegisterService, Depends(get_user_register_service)]
 
 
 class UserLogoutService:
@@ -147,7 +136,22 @@ class UserLogoutService:
             return True
         return False
 
+
+
+def get_user_login_service(
+    http_cookie_service: Annotated[HttpCookieAuthService, Depends(get_http_cookie_auth_service)]
+) -> UserLoginService:
+    return UserLoginService(http_cookie_service=http_cookie_service)
+
+
+def get_user_register_service() -> UserRegisterService:
+    return UserRegisterService()
+
+
 def get_user_logout_service(request: Request, response: Response) -> UserLogoutService:
     return UserLogoutService(request, response)
 
+
+type UserLoginServiceDeps = Annotated[UserLoginService, Depends(get_user_login_service)]
+type UserRegisterServiceDeps = Annotated[UserRegisterService, Depends(get_user_register_service)]
 type UserLogoutServiceDeps = Annotated[UserLogoutService, Depends(get_user_logout_service)]
