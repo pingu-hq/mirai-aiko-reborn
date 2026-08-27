@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 
+from app.routers.auth_router import router as auth_router
+
 app = FastAPI(
     version="0.1.0",
     title="Mirai Aiko (Reborn Version)",
 )
+
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth for users with sample user test"])
 
 
 @app.get("/health-check")
