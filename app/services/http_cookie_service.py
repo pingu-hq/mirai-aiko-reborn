@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from json import dumps as json_dumps
 from json import loads as json_loads
 from secrets import token_urlsafe
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from redis.asyncio import Redis, RedisError
 
 from app.core.config import settings
@@ -168,3 +168,5 @@ class HttpCookieAuthService:
 
 def get_http_cookie_auth_service(request: Request, response: Response) -> HttpCookieAuthService:
     return HttpCookieAuthService(request, response)
+
+type HttpCookieAuthServiceDeps = Annotated[HttpCookieAuthService, Depends(get_http_cookie_auth_service)]
