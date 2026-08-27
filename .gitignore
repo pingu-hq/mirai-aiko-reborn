@@ -67,4 +67,5 @@ Thumbs.db
 app_demo/
 
 tasks.yaml
-agents.yaml
+agents.yaml.
+.ruff_cache/
