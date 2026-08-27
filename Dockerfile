@@ -1,6 +1,6 @@
 FROM python:3.13-trixie AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.4 /uv /uvx /usr/local/bin/
+COPY --from=astral/uv:0.8.4 /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
