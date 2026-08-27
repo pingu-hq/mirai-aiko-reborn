@@ -19,7 +19,7 @@ class RedisCacheBaseRepository:
     def init_redis_cache_repository(cls):
         if cls._redis_asyncio_client is None:
             cls._redis_asyncio_client: Redis = Redis.from_url(
-                settings.redis_url, decode_responses=True
+                settings.redis_uri, decode_responses=True
             )
 
     @classmethod
