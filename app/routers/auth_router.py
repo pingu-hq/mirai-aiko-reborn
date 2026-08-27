@@ -3,7 +3,12 @@ from secrets import token_urlsafe
 from fastapi import APIRouter, status
 
 from app.schemas.users_schema import UserLoginSchema, UserRegisterSchema
-from app.services.users_service import UserLoginServiceDeps, UserRegisterServiceDeps
+from app.services.http_cookie_service import HttpCookieAuthServiceDeps
+from app.services.users_service import (
+    UserLoginServiceDeps,
+    UserLogoutServiceDeps,
+    UserRegisterServiceDeps,
+)
 
 router = APIRouter()
 
@@ -38,3 +43,16 @@ async def login_user(user_login_schema: UserLoginSchema, user_login_service: Use
     user_login_service.insert_user_schema(user_login_schema)
     await user_login_service.login_user_and_set_cookie()
     return {"message": "User logged in successfully"}
+
+
+@router.get("/me", status_code=status.HTTP_200_OK)
+async def get_me(auth_service: HttpCookieAuthServiceDeps):
+    sub = await auth_service.get_user_id()
+    return {"message": "User logged in successfully", "sub": sub}
+
+
+@router.get("/logout", status_code=status.HTTP_200_OK)
+async def logout(logout_service: UserLogoutServiceDeps):
+    if await logout_service.logout_and_clear_cookies():
+        return {"message": "User logged out successfully"}
+    return {"message": "No active session to logout"}
