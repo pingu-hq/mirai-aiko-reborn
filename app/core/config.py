@@ -6,17 +6,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    REDIS_URL: str | None = os.getenv("REDIS_URL", None)
-    MONGO_URI: str | None = os.getenv("MONGO_URL", None)
+    MONGO_URI: str | None = os.getenv("MONGO_URI", None)
     REDIS_URI: str | None = os.getenv("REDIS_URI", None)
     PH_TZ: ZoneInfo = ZoneInfo("Asia/Manila")
     IS_DEPLOYED_FOR_PRODUCTION: bool = os.getenv("IS_DEPLOYED_FOR_PRODUCTION", "false").lower() == "true"
-
-    @property
-    def redis_url(self) -> str:
-        if not self.REDIS_URL:
-            raise RuntimeError("REDIS_URL not set")
-        return self.REDIS_URL
+    GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY", None)
+    COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY", None)
+    MILVUS_URI: str | None = os.getenv("MILVUS_URI", None)
+    MILVUS_TOKEN: str | None = os.getenv("MILVUS_TOKEN", None)
+    
 
     @property
     def ph_tz(self) -> ZoneInfo:
@@ -33,14 +31,38 @@ class Settings:
     @property
     def mongo_uri(self) -> str:
         if not self.MONGO_URI:
-            return "mongodb://mongo:27017/" # from Docker default
+            raise RuntimeError("MONGO_URI not set")
         return self.MONGO_URI
 
     @property
     def redis_uri(self) -> str:
         if not self.REDIS_URI:
-            return "redis://redis:6379/0" # from Docker default
+            raise RuntimeError("REDIS_URI not set")
         return self.REDIS_URI
+
+    @property
+    def groq_api_key(self) -> str:
+        if not self.GROQ_API_KEY:
+            raise RuntimeError("GROQ_API_KEY not set")
+        return self.GROQ_API_KEY
+
+    @property
+    def cohere_api_key(self) -> str:
+        if not self.COHERE_API_KEY:
+            raise RuntimeError("COHERE_API_KEY not set")
+        return self.COHERE_API_KEY
+
+    @property
+    def milvus_uri(self) -> str:
+        if not self.MILVUS_URI:
+            raise RuntimeError("MILVUS_URI not set")
+        return self.MILVUS_URI
+
+    @property
+    def milvus_token(self) -> str:
+        if not self.MILVUS_TOKEN:
+            raise RuntimeError("MILVUS_TOKEN not set")
+        return self.MILVUS_TOKEN
 
 
 settings = Settings()
