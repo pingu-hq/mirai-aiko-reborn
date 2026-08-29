@@ -7,11 +7,13 @@ from app.services.users_service import (
     UserLoginService,
     UserLogoutService,
     UserRegisterService,
+    UserAccessService
 )
 
 type UserLogoutServiceDepends = Annotated[UserLogoutService, Depends(get_user_logout_service)]
 type UserLoginServiceDepends = Annotated[UserLoginService, Depends(get_user_login_service)]
 type UserRegisterServiceDepends = Annotated[UserRegisterService, Depends(get_user_register_service)]
+type UserAccessServiceDepends = Annotated[UserAccessService, Depends(get_user_access_service)]
 
 
 def get_user_login_service(
@@ -27,3 +29,5 @@ def get_user_logout_service(request: Request, response: Response) -> UserLogoutS
     return UserLogoutService(request, response)
 
 
+def get_user_access_service(request: Request, response: Response) -> UserAccessService:
+    return UserAccessService(request, response)

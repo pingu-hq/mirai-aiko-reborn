@@ -117,6 +117,19 @@ class UserRegisterService:
             )
 
 
+class UserAccessService:
+    def __init__(
+        self,
+        request: Request,
+        response: Response,
+    ):
+        self.http_cookie_service = HttpCookieAuthService(request, response)
+        self._user_id: str | None = None
+
+    async def get_user_id(self) -> str:
+        if self._user_id is None:
+            self._user_id = await self.http_cookie_service.get_user_id()
+        return self._user_id
 
 class UserLogoutService:
     def __init__(
