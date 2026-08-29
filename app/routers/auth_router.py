@@ -4,11 +4,12 @@ from fastapi import APIRouter, status
 
 from app.schemas.users_schema import UserLoginSchema, UserRegisterSchema
 from app.dependencies.auth_dependency import HttpCookieAuthServiceDepends
-from app.services.users_service import (
-    UserLoginServiceDeps,
-    UserLogoutServiceDeps,
-    UserRegisterServiceDeps,
+from app.dependencies.users_dependency import (
+    UserLoginServiceDepends,
+    UserLogoutServiceDepends,
+    UserRegisterServiceDepends,
 )
+
 
 router = APIRouter()
 
@@ -32,14 +33,14 @@ def get_sample_user():
 
 
 @router.post("/register-user", status_code=status.HTTP_201_CREATED)
-async def register_user(user_schema: UserRegisterSchema, user_register_service: UserRegisterServiceDeps):
+async def register_user(user_schema: UserRegisterSchema, user_register_service: UserRegisterServiceDepends):
     user_register_service.insert_user_schema(user_schema)
     await user_register_service.register_user()
     return {"message": "User registered successfully"}
 
 
 @router.post("/login-user", status_code=status.HTTP_200_OK)
-async def login_user(user_login_schema: UserLoginSchema, user_login_service: UserLoginServiceDeps):
+async def login_user(user_login_schema: UserLoginSchema, user_login_service: UserLoginServiceDepends):
     user_login_service.insert_user_schema(user_login_schema)
     await user_login_service.login_user_and_set_cookie()
     return {"message": "User logged in successfully"}
@@ -52,7 +53,7 @@ async def get_me(auth_service: HttpCookieAuthServiceDepends):
 
 
 @router.get("/logout", status_code=status.HTTP_200_OK)
-async def logout(logout_service: UserLogoutServiceDeps):
+async def logout(logout_service: UserLogoutServiceDepends):
     if await logout_service.logout_and_clear_cookies():
         return {"message": "User logged out successfully"}
     return {"message": "No active session to logout"}

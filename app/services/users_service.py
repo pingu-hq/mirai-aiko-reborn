@@ -1,17 +1,13 @@
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import HTTPException, Request, Response, status
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
 from app.repositories.database import UsersRepository
 from app.schemas.users_schema import UserLoginSchema, UserRegisterSchema
-from app.services.http_cookie_service import (
-    HttpCookieAuthService,
-    get_http_cookie_auth_service,
-)
+from app.services.http_cookie_service import HttpCookieAuthService
 from app.services.password_hasher_service import PasswordHasherService
 
 
@@ -135,23 +131,3 @@ class UserLogoutService:
             await self.http_cookie_service.remove_http_cookie()
             return True
         return False
-
-
-
-def get_user_login_service(
-    http_cookie_service: Annotated[HttpCookieAuthService, Depends(get_http_cookie_auth_service)]
-) -> UserLoginService:
-    return UserLoginService(http_cookie_service=http_cookie_service)
-
-
-def get_user_register_service() -> UserRegisterService:
-    return UserRegisterService()
-
-
-def get_user_logout_service(request: Request, response: Response) -> UserLogoutService:
-    return UserLogoutService(request, response)
-
-
-type UserLoginServiceDeps = Annotated[UserLoginService, Depends(get_user_login_service)]
-type UserRegisterServiceDeps = Annotated[UserRegisterService, Depends(get_user_register_service)]
-type UserLogoutServiceDeps = Annotated[UserLogoutService, Depends(get_user_logout_service)]
