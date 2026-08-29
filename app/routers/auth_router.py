@@ -3,7 +3,7 @@ from secrets import token_urlsafe
 from fastapi import APIRouter, status
 
 from app.schemas.users_schema import UserLoginSchema, UserRegisterSchema
-from app.services.http_cookie_service import HttpCookieAuthServiceDeps
+from app.dependencies.auth_dependency import HttpCookieAuthServiceDepends
 from app.services.users_service import (
     UserLoginServiceDeps,
     UserLogoutServiceDeps,
@@ -46,7 +46,7 @@ async def login_user(user_login_schema: UserLoginSchema, user_login_service: Use
 
 
 @router.get("/me", status_code=status.HTTP_200_OK)
-async def get_me(auth_service: HttpCookieAuthServiceDeps):
+async def get_me(auth_service: HttpCookieAuthServiceDepends):
     sub = await auth_service.get_user_id()
     return {"message": "User logged in successfully", "sub": sub}
 
