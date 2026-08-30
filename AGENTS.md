@@ -10,10 +10,20 @@
 - Prompt/config files are not arbitrary: Lily prompt templates are in `app/core/agents/config/chat_prompts.toml` (loaded/initialized in `lifespan` via `ConfigLoader.init_config_toml_file()`), and YAML prompts come from `chat_prompts.yaml` (cached via `lru_cache`).
 - CrewAI agent/task definitions are limited to the whitelisted YAML names in `app/core/agents/agent_loader.py` (`agents.yaml`, `tasks.yaml`, `sample_agents.yaml`, `sample_tasks.yaml`); adding new YAML filenames won’t load.
 - Config loading is cached (`lru_cache` / static fields), so after editing YAML/TOML configs you must restart the server to pick up changes.
-- README references NATS + SSE + `frontend/`, but this repo currently has no NATS/SSE/frontend implementation (only README references); use the implemented FastAPI routes under `app/routers/*`.
-- `celery[redis]` is in `pyproject.toml`; Celery is scaffolded in `worker/main.py` with a hardcoded Redis broker/backend URL (`redis://127.0.0.1:6379/0`) and a single minimal task (`worker.sleep_only_task`, sleeps only).
-- Run the Celery worker with `uv run celery -A worker.main worker -l info` (requires Redis at `127.0.0.1:6379`).
-- To enqueue a Celery job (sleep-only demo), call `POST /api/playground/enqueue-celery-sample-1` (opaque cookie auth) and read the returned `task_id`.
-- To check progress/result, call `GET /api/playground/celery-task-status/{task_id}`.
-- `docker-compose.yaml` only runs the FastAPI container (`fastapi-service-miako`) and binds `127.0.0.1:8000:8000`; you still need external services (Redis/MongoDB/Milvus/etc.) reachable from the container.
-- The `worker/main.py` task body is intentionally minimal (only `await sleep(...)`); you’ll need to add real tasks/handlers for chat/workflow once you’re ready.
+- The repository no longer uses NATS, SSE, or a separate frontend directory; the FastAPI routes under `app/routers/*` provide the API, and a simple HTMX-based UI can be served as static files if desired.
+- The Celery worker scaffold remains in `worker/main.py` but is not required for the current setup; all heavy work runs inside FastAPI as an async task.
+- Run the API with `uv run python main.py`; no separate Celery process is needed.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- **Note: The graph was built from `app_orig_copy/`, but active development occurs in `app/`. Use `graphify update .` to re-index the current codebase.**
