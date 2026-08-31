@@ -1,0 +1,5 @@
+[task]
+name = "Final Response Generation"
+[latest]
+description = """Take the structured JSON analysis from the previous task and formulate a coherent, context-aware, and natural final response to the user. Ensure the tone matches the context and directly addresses the `{input_message}` using the insights provided in the JSON."""
+expected_output = "A single, clean string representing the final response text (no markdown code blocks unless specified, just the raw conversational string)."

@@ -1,0 +1,19 @@
+[task]
+name = "Context & Intent Analysis (Data Structuring)"
+
+[latest]
+description = """Analyze the incoming user message alongside historical context and semantic memories to extract intent, relevant background, and conversation flow. 
+- Current Message: `{input_message}`
+- Semantic Memories: `{semantic_memory_context}`
+- Recent Conversations: `{most_recent_conversations}`
+
+Synthesize these inputs to determine what the user wants, what context is relevant, and how it connects to past interactions."""
+expected_output = """A strict JSON object with the following schema:
+```json
+{
+  "user_intent": "string (core goal of the input_message)",
+  "relevant_semantic_context": ["string (filtered highlights from semantic_memory_context)"],
+  "conversation_continuity": "string (summary of recent dialogue flow)",
+  "key_entities_or_constraints": ["string"]
+}
+```"""
