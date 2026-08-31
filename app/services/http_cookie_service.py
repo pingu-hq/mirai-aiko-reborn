@@ -52,7 +52,7 @@ class OpaqueTokenService:
             "iat": datetime.now(settings.ph_tz).strftime("%Y-%m-%d %H:%M:%S")
         }
         if token_type == "access":
-            expire = timedelta(minutes=30)
+            expire = timedelta(minutes=7)
         else:
             expire = timedelta(days=7)
         if await self._set_value(new_token, new_payload, expire):
@@ -137,15 +137,20 @@ class HttpCookieAuthService:
         return sub
 
     async def get_user_id(self) -> str:
+        unauth_error = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
         sub_from_access = await self._get_sub_from_access_token()
         if sub_from_access:
             return sub_from_access
+
+        old_refresh_token = self._get_token_from_cookie("refresh")
+        if old_refresh_token is None:
+            raise unauth_error
             
         sub_from_refresh = await self._get_sub_from_refresh_token()
         if sub_from_refresh is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token is invalid")
-
-        await self.opaque_token_service.delete_opaque_token(sub_from_refresh)
+            raise unauth_error
+            
+        await self.opaque_token_service.delete_opaque_token(old_refresh_token)
         await self.set_http_cookie(sub_from_refresh, "access")
         await self.set_http_cookie(sub_from_refresh, "refresh")
         return sub_from_refresh
