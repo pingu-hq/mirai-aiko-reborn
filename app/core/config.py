@@ -71,5 +71,13 @@ class Settings:
             raise RuntimeError("MILVUS_COLLECTION_NAME not set")
         return self.MILVUS_COLLECTION_NAME
 
+    @property
+    def milvus_config(self) -> dict[str, str]:
+        return {
+            "uri": self.milvus_uri,
+            "token": self.milvus_token,
+            "collection_name": self.milvus_collection_name,
+        }
+
 
 settings = Settings()
