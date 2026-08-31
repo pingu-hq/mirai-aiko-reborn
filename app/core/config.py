@@ -14,6 +14,7 @@ class Settings:
     COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY", None)
     MILVUS_URI: str | None = os.getenv("MILVUS_URI", None)
     MILVUS_TOKEN: str | None = os.getenv("MILVUS_TOKEN", None)
+    MILVUS_COLLECTION_NAME: str | None = os.getenv("MILVUS_COLLECTION_NAME", None)
     
 
     @property
@@ -63,6 +64,12 @@ class Settings:
         if not self.MILVUS_TOKEN:
             raise RuntimeError("MILVUS_TOKEN not set")
         return self.MILVUS_TOKEN
+
+    @property
+    def milvus_collection_name(self) -> str:
+        if not self.MILVUS_COLLECTION_NAME:
+            raise RuntimeError("MILVUS_COLLECTION_NAME not set")
+        return self.MILVUS_COLLECTION_NAME
 
 
 settings = Settings()
