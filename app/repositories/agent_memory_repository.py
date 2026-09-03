@@ -70,18 +70,25 @@ class AgentMemoryRepository:
     async def add_memory(self, user_id: str, content: str):
         await self.memory_client.add(user_id=user_id, messages=content)
 
-    async def search_memory(self, user_id: str, content: str, output: Literal["str", "raw"] = "str", **kwargs):
+    async def search_memory(
+        self, 
+        user_id: str, 
+        content: str,
+        output: Literal["str", "raw"] = "str",
+        **kwargs
+    ) -> str | list[dict]:
         results = await self.memory_client.search(query=content, filters={"user_id": user_id}, **kwargs)
         cleaned_data = self.cleaned_searched_result(search_results=results)
         if output == "str":
             return dumps(cleaned_data)
         return cleaned_data
 
-    async def raw_search_memory(
-            self, user_id: str,
-            query: str,
-            output: Literal["str", "raw"] = "str",
-            explain: bool = False
+    async def full_search_memory(
+        self,
+        user_id: str,
+        query: str,
+        output: Literal["str", "raw"] = "str",
+        explain: bool = False,
     ) -> str | dict:
 
         results = await self.memory_client.search(
