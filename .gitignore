@@ -70,3 +70,4 @@ tasks.yaml
 agents.yaml.
 .ruff_cache/
 graphify-out/
+logs/
