@@ -1,4 +1,4 @@
-from crewai import Agent, Task, Crew, Process
+from crewai import Agent, Task, Crew, Process, CrewOutput
 
 
 class AgentEngine:
@@ -21,7 +21,10 @@ class AgentEngine:
             tasks=self.tasks,
             process=Process.sequential,
         )
-    async def run(self, inputs: dict[str, str]):
+    async def run(self, inputs: dict[str, str]) -> str:
         if self.crew is None:
-            self.create_crew()
-        return await self.crew.kickoff_async(inputs=inputs)
+            self.crew = self.create_crew()
+        result = await self.crew.kickoff_async(inputs=inputs)
+        if isinstance(result, CrewOutput):
+            return result.raw
+        return str(result)
