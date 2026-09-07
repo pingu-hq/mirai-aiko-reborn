@@ -2,13 +2,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.core.logger import LoguruHandler
 from app.repositories.caches import RedisCacheBaseRepository
 from app.repositories.database import MongoBase
-from app.core.logger import initialize_setup_logger
 from app.routers.auth_router import router as auth_router
 
-
-initialize_setup_logger()
+loguru_handler = LoguruHandler()
+loguru_handler.setup_logger("dev") # Dev for now to ensure it does log as test. 
 
 
 @asynccontextmanager
