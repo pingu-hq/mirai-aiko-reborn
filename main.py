@@ -4,7 +4,11 @@ from fastapi import FastAPI
 
 from app.repositories.caches import RedisCacheBaseRepository
 from app.repositories.database import MongoBase
+from app.core.logger import initialize_setup_logger
 from app.routers.auth_router import router as auth_router
+
+
+initialize_setup_logger()
 
 
 @asynccontextmanager
