@@ -2,6 +2,7 @@ import os
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
@@ -15,8 +16,10 @@ class Settings:
     MILVUS_URI: str | None = os.getenv("MILVUS_URI", None)
     MILVUS_TOKEN: str | None = os.getenv("MILVUS_TOKEN", None)
     MILVUS_COLLECTION_NAME: str | None = os.getenv("MILVUS_COLLECTION_NAME", None)
-    
 
+    def __init__(self):
+        logger.info("Loading application settings")
+        
     @property
     def ph_tz(self) -> ZoneInfo:
         try:
